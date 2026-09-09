@@ -98,15 +98,6 @@ export class IntegrationsStudioController {
   private refresh(): void { this.store.set({ ...this.store.getSnapshot() }) }
 
   /**
-   * Replace one staged view field.
-   * @param field - the state member to replace.
-   * @param value - next value as the section edits it.
-   */
-  patchField<K extends keyof IntegrationsStudioState>(field: K, value: IntegrationsStudioState[K]): void {
-    this.store.set({ ...this.store.getSnapshot(), [field]: value })
-  }
-
-  /**
    * Replace one staged draft field.
    * @param field - the draft field to replace.
    * @param value - next draft value as the page edits it.
@@ -131,11 +122,24 @@ export class IntegrationsStudioController {
   }
 
   /**
-   * Build the face the section's slot registration injects.
-   * @returns the tab snapshot source.
+   * Build the face the section's slot registration injects: the tab snapshot
+   * plus the complete staged-view mutation API.
+   * @returns the section's inject face.
    */
-  inject(): IntegrationsStudioFace {
-    return { hooks: { studio: this.store } }
+  inject(): IntegrationsStudioInjected {
+    return {
+      hooks: { studio: this.store },
+      actions: {
+        setTab: (tab) => { this.patchState({ tab }) },
+        setQuery: (query) => { this.patchState({ query }) },
+        setKind: (kind) => { this.patchState({ kind }) },
+        setCategory: (category) => { this.patchState({ category }) },
+        patchDraft: (field, value) => {
+          this.patchState({ draft: { ...this.store.getSnapshot().draft, [field]: value } })
+        },
+        setDraft: (fields) => { this.patchState({ draft: fields }) },
+      },
+    }
   }
 
   /**
@@ -144,4 +148,33 @@ export class IntegrationsStudioController {
   dispose(): void {
     this.unsubscribe()
   }
+}
+
+/** The state patch the section routes through the controller. */
+export interface StudioActions {
+  /** Show one tab. */
+  setTab(tab: StudioTabId): void
+  /** Replace the marketplace query draft. */
+  setQuery(query: string): void
+  /** Replace the marketplace kind filter. */
+  setKind(kind: CatalogKind): void
+  /** Replace the marketplace category filter. */
+  setCategory(category: string): void
+  /** Replace one staged studio draft field. */
+  patchDraft(field: keyof StudioDraftFields, value: string): void
+  /** Stage one whole draft replacement. */
+  setDraft(fields: StudioDraftFields): void
+}
+
+/**
+ * The registration-side inject face, complete: snapshot + actions — the
+ * complete mutation API the section binds, per the slots discipline.
+ */
+export interface IntegrationsStudioInjected {
+  hooks: {
+    /** Section snapshot bound by the renderer as useIntegrationsStudio. */
+    studio: SnapshotStore<IntegrationsStudioState>
+  }
+  /** The section's staged-view mutation API. */
+  actions: StudioActions
 }
