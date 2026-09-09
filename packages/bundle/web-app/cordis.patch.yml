@@ -283,6 +283,11 @@
     - id: ui-settings-plugins
       name: '@deepseek-ai/dsh-client-ui-settings-plugins'
 
+    # Integrations studio: the in-app marketplace browser (MCP servers +
+    # skills), integration toggles, and custom-skill authoring/deployment.
+    - id: integrations-studio
+      name: '@deepseek-ai/dsh-client-integrations-studio'
+
     # Plan control: the composer plan seat over the plan projection + /plan channel.
     - id: ui-plan
       name: '@deepseek-ai/dsh-client-ui-plan'
