@@ -108,7 +108,7 @@ export function IntegrationsSection({ t, useStudio, actions }: IntegrationsSecti
       >
         {view.tab === 'marketplace'
           ? <MarketplaceTab t={t} query={view.query} kind={view.kind} category={view.category} />
-          : <IntegrationsTab t={t} skills={[]} />}
+          : <IntegrationsTab t={t} skills={view.skills} />}
       </div>
     </div>
   )
