@@ -15,17 +15,18 @@ import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
 import type { Context as ClientContext } from '@deepseek-ai/cordis'
 import { IntegrationsSection } from './IntegrationsSection.tsx'
-import type { IntegrationsStudioInjected } from './studio-store.ts'
+import { IntegrationsStudioController } from './studio-store.ts'
+import { decodeStudioDocument } from './studio-store.ts'
 import { en, zh } from './locales.ts'
 
 /** Dictionary namespace owned by this plugin. */
 const NS = 'settings.integrations-studio'
 
+/** Settings namespace the Host plugin registered; spelled here (no Host import). */
+const STUDIO_SETTINGS_NAMESPACE = 'integrations-studio'
+
 /** Required services (cordis fiber inject). */
 export const inject = ['slots', 'locale', 'connection', 'settingsScope']
-
-/** Exported for the section's slot registration's locale seat. */
-export { en, zh }
 
 /**
  * Mount the Integrations section.
@@ -34,13 +35,22 @@ export { en, zh }
 export function apply(ctx: ClientContext): void {
   const t = ctx.locale.bind(NS)
   ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'integrations-studio: section dictionaries')
+
+  const studio = new IntegrationsStudioController(
+    ctx.settingsScope.bind({
+      namespace: STUDIO_SETTINGS_NAMESPACE,
+      decode: decodeStudioDocument,
+    }),
+  )
+  ctx.effect(() => () => { studio.dispose() }, 'integrations-studio: section controller')
+
   ctx.slots.inject('settings.section', () => ctx.slots.register({
     name: 'settings.section',
     id: 'integrations-studio',
     order: 40,
     label: () => t('nav'),
     locale: NS,
-    inject: (): IntegrationsStudioInjected => ({ hooks: { studio: undefined as never }, actions: undefined as never }),
+    inject: () => studio.inject(),
     children: {},
   }, IntegrationsSection))
 }

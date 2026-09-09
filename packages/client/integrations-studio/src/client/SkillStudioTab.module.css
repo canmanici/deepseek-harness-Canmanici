@@ -1,0 +1,2 @@
+/* The Skill Studio tab's two-column layout. */
+.studio { display: flex; gap: 14px; flex-wrap: wrap; align-items: stretch; }
