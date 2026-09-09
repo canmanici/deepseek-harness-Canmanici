@@ -1,7 +1,8 @@
 {
   "name": "@deepseek-ai/dsh-integrations-studio",
-  "description": "Host-side registry for in-app MCP server and skill integrations: persisted deployment document, skill deployment bridge, marketplace catalog, and reachability probing",
+  "description": "Host-side registry for in-app MCP server and skill integrations: durable settings namespace, skill-name grammar, draft validation, and deployed-entry render",
   "version": "0.1.2-alpha.1",
+  "private": true,
   "publishConfig": {
     "access": "public"
   },
@@ -38,7 +39,7 @@
     "@deepseek-ai/dsh-invariants": "workspace:^",
     "@deepseek-ai/dsh-scope": "workspace:^",
     "@deepseek-ai/dsh-skill": "workspace:^",
-    "@deepseek-ai/dsh-typert": "workspace:^"
+    "@deepseek-ai/dsh-settings": "workspace:^"
   },
   "devDependencies": {
     "@deepseek-ai/cordis": "workspace:^",
@@ -46,8 +47,7 @@
     "@deepseek-ai/dsh-invariants": "workspace:^",
     "@deepseek-ai/dsh-scope": "workspace:^",
     "@deepseek-ai/dsh-skill": "workspace:^",
-    "@deepseek-ai/dsh-typert": "workspace:^",
-    "@deepseek-ai/dsh-schemastery": "workspace:^"
+    "@deepseek-ai/dsh-settings": "workspace:^"
   },
   "files": [
     "lib/index.js",
