@@ -115,6 +115,10 @@ export interface StudioActions {
   patchDraft(field: keyof StudioDraftFields, value: string): void
   /** Stage one whole draft replacement. */
   setDraft(fields: StudioDraftFields): void
+  /** One-click install: append one deployed entry and republish. */
+  installSkill(entry: DeployedSkillEntry): Promise<void>
+  /** Remove one deployed entry by name and republish. */
+  removeSkill(name: string): Promise<void>
 }
 
 /**
@@ -180,6 +184,8 @@ export class IntegrationsStudioController {
           this.patchState('draft', { ...this.store.getSnapshot().draft, [field]: value })
         },
         setDraft: (fields) => { this.patchState('draft', fields) },
+        installSkill: async (entry) => { await this.persistSkill(entry) },
+        removeSkill: async (name) => { await this.removeSkill(name) },
       },
     }
   }
@@ -189,5 +195,25 @@ export class IntegrationsStudioController {
    */
   dispose(): void {
     this.unsubscribe()
+  }
+
+  /**
+   * One-click install: append one deployed entry through the scope's write seam.
+   */
+  private async persistSkill(entry: DeployedSkillEntry): Promise<void> {
+    const snapshot = this.scope.getSnapshot()
+    const document = decodeStudioDocument(snapshot.value)
+    const next = [...(document?.skills ?? []).filter(skill => skill.name !== entry.name), entry]
+    await this.scope.set('skills', next)
+  }
+
+  /**
+   * Remove one deployed entry by name through the scope's write seam.
+   */
+  private async removeSkill(name: string): Promise<void> {
+    const snapshot = this.scope.getSnapshot()
+    const document = decodeStudioDocument(snapshot.value)
+    const next = (document?.skills ?? []).filter(skill => skill.name !== name)
+    await this.scope.set('skills', next)
   }
 }

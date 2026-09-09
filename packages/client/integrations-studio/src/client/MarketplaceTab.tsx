@@ -10,7 +10,7 @@ import { useId } from 'react'
 import clsx from 'clsx'
 import { MARKETPLACE_CATALOG, MARKETPLACE_SOURCES, type CatalogItem } from './catalog.ts'
 import { rankItems } from './search.ts'
-import type { CatalogKind } from './studio-store.ts'
+import type { CatalogKind, DeployedSkillEntry } from './studio-store.ts'
 import css from './IntegrationsSection.module.css'
 
 /** The Marketplace tab's props: state and mutation API from the section. */
@@ -28,6 +28,8 @@ export interface MarketplaceTabProps {
     setQuery(query: string): void
     setKind(kind: CatalogKind): void
     setCategory(category: string): void
+    /** One-click install: append the entry to the persisted document. */
+    installSkill(entry: DeployedSkillEntry): Promise<void>
   }
 }
 
@@ -55,6 +57,16 @@ export function MarketplaceTab({ t, query, kind, category, actions }: Marketplac
     && (category === 'all' || item.category === category))
   const ranked = rankItems(pool, query)
   const categories = Array.from(new Set(MARKETPLACE_CATALOG.map(item => item.category))).sort()
+
+  const installItem = (item: CatalogItem): void => {
+    void actions.installSkill({
+      name: item.name,
+      description: item.description,
+      whenToUse: item.whenToUse ?? '',
+      instructions: item.content ?? '',
+      deployedAt: new Date().toISOString(),
+    })
+  }
 
   return (
     <div className={css.panel}>
@@ -127,6 +139,7 @@ export function MarketplaceTab({ t, query, kind, category, actions }: Marketplac
                 matchedTags={match.matchedTags}
                 searching={searching}
                 t={t}
+                onInstall={installItem}
               />
             ))}
           </div>
@@ -152,6 +165,7 @@ function ResultCard(props: {
   readonly matchedTags: readonly string[]
   readonly searching: boolean
   readonly t: MarketplaceTabProps['t']
+  readonly onInstall: (item: CatalogItem) => void
 }) {
   const { item, searching } = props
   return (
@@ -159,7 +173,7 @@ function ResultCard(props: {
       <div className={css.rowHead}>
         <span className={css.kindBadge}>{item.kind === 'mcp' ? 'MCP' : 'Skill'}</span>
         <span className={css.rowName}>{item.name}</span>
-        {'transport' in item && item.transport !== undefined
+        {item.transport !== undefined
           ? <span className={css.rowHint}>{item.transport === 'http' ? 'HTTP' : 'stdio'}</span>
           : null}
         {searching && props.matchWeight === 100
@@ -182,9 +196,19 @@ function ResultCard(props: {
           </div>
         )
         : null}
-      {item.docsUrl !== undefined
-        ? <a className={css.rowHint} href={item.docsUrl} target='_blank' rel='noreferrer'>{props.t('docs')}</a>
-        : null}
+      <div className={css.rowFoot}>
+        {item.docsUrl !== undefined
+          ? <a className={css.rowHint} href={item.docsUrl} target='_blank' rel='noreferrer'>{props.t('docs')}</a>
+          : <span />}
+        <button
+          type='button'
+          className={clsx(css.catBtn, css.catBtnActive)}
+          aria-label={`${props.t('install')}: ${item.name}`}
+          onClick={() => { props.onInstall(item) }}
+        >
+          {props.t('install')}
+        </button>
+      </div>
       {searching && props.matchWeight > 0
         ? (
           <div className={css.meter} aria-hidden='true'>
