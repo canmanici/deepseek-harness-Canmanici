@@ -1,0 +1,12 @@
+{
+  "title": "DSH RED + Saturation + SLO Burn-down",
+  "uid": "dsh-red",
+  "panels": [
+    { "title": "RED — Rate", "type": "timeseries", "datasource": "Prometheus", "targets": [{ "expr": "sum(rate(http_requests_total[5m]))" }] },
+    { "title": "RED — Errors", "type": "timeseries", "targets": [{ "expr": "sum(rate(http_requests_total{status=~'5..'}[5m])) / sum(rate(http_requests_total[5m]))" }] },
+    { "title": "RED — Duration p95", "type": "timeseries", "targets": [{ "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m]))" }] },
+    { "title": "Saturation — CPU", "type": "timeseries", "targets": [{ "expr": "avg(rate(process_cpu_seconds_total[5m]))" }] },
+    { "title": "Saturation — Memory", "type": "timeseries", "targets": [{ "expr": "process_resident_memory_bytes" }] },
+    { "title": "SLO Burn-down (99.9% / 43.2min budget)", "type": "stat", "targets": [{ "expr": "1 - (sum(rate(http_requests_total{status=~'5..'}[30d])) / sum(rate(http_requests_total[30d])))" }] }
+  ]
+}

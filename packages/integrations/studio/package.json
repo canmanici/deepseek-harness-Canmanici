@@ -1,0 +1,57 @@
+{
+  "name": "@deepseek-ai/dsh-integrations-studio",
+  "description": "Host-side registry for in-app MCP server and skill integrations: persisted deployment document, skill deployment bridge, marketplace catalog, and reachability probing",
+  "version": "0.1.2-alpha.1",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+    "directory": "packages/integrations/studio"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./invariant": {
+      "types": "./lib/types/invariant.d.ts",
+      "default": "./lib/invariant.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "bundle": "tsdown",
+    "watch": "tsdown --watch"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@deepseek-ai/schemastery": "workspace:^"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "workspace:^",
+    "@deepseek-ai/dsh-brand": "workspace:^",
+    "@deepseek-ai/dsh-invariants": "workspace:^",
+    "@deepseek-ai/dsh-scope": "workspace:^",
+    "@deepseek-ai/dsh-skill": "workspace:^",
+    "@deepseek-ai/dsh-typert": "workspace:^"
+  },
+  "devDependencies": {
+    "@deepseek-ai/cordis": "workspace:^",
+    "@deepseek-ai/dsh-brand": "workspace:^",
+    "@deepseek-ai/dsh-invariants": "workspace:^",
+    "@deepseek-ai/dsh-scope": "workspace:^",
+    "@deepseek-ai/dsh-skill": "workspace:^",
+    "@deepseek-ai/dsh-typert": "workspace:^",
+    "@deepseek-ai/dsh-schemastery": "workspace:^"
+  },
+  "files": [
+    "lib/index.js",
+    "lib/invariant.js",
+    "lib/types/**/*.d.ts"
+  ]
+}

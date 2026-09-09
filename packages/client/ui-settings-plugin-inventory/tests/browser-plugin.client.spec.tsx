@@ -7,16 +7,23 @@ import { SlotRegistry } from '@deepseek-ai/dsh-client-ui-renderer/client'
 import { resolveSlotLabel } from '@deepseek-ai/dsh-client-ui-slots'
 import { usePinnedBrowserLanguages } from '@deepseek-ai/dsh-client-test-runtime'
 import { apply, inject, NS } from '../src/client/index.ts'
+import type { PluginEntryId } from '@deepseek-ai/dsh-api-remotes/client'
 import { PluginInventorySettingsTab } from '../src/client/PluginInventorySettingsTab.tsx'
 import type { PluginInventorySettingsTabInjected } from '../src/client/PluginInventorySettingsTab.tsx'
+
+/** Fixture stand-in for the Host's branded entry id. */
+const entryId = (id: string): PluginEntryId => id as PluginEntryId
 
 usePinnedBrowserLanguages('zh-CN')
 afterEach(cleanup)
 
-const EMPTY = { entries: [] }
+const EMPTY = { entries: [], writable: true, live: true }
 type ListResult =
   | { readonly ok: true; readonly value: typeof EMPTY }
   | { readonly ok: false; readonly error: { readonly code: string; readonly message: string } }
+type ToggleResult =
+  | { readonly ok: true; readonly value: undefined }
+  | { readonly ok: false; readonly error: { readonly code: string; readonly message: string; readonly details?: unknown } }
 
 async function bench() {
   const ctx = new Context()
@@ -31,8 +38,10 @@ async function bench() {
   new RemoteService(ctx)
   const list = vi.fn<() => Promise<ListResult>>()
     .mockResolvedValue({ ok: true, value: EMPTY })
-  ctx.provide('remote.pluginInventory', { list })
-  return { ctx, slots: ctx.get('slots') as SlotRegistry, locale, list }
+  const setEntryEnabled = vi.fn<() => Promise<ToggleResult>>()
+    .mockResolvedValue({ ok: true, value: undefined })
+  ctx.provide('remote.pluginInventory', { list, setEntryEnabled })
+  return { ctx, slots: ctx.get('slots') as SlotRegistry, locale, list, setEntryEnabled }
 }
 
 function declare(slots: SlotRegistry): () => void {
@@ -60,10 +69,52 @@ describe('ui-settings-plugin-inventory browser plugin', () => {
     expect(b.list).not.toHaveBeenCalled()
 
     const injected = (entry.inject as unknown as () => PluginInventorySettingsTabInjected)()
+    expect(typeof injected.setEnabled).toBe('function')
     await expect(injected.list()).resolves.toEqual(EMPTY)
     expect(b.list).toHaveBeenCalledOnce()
     b.list.mockResolvedValueOnce({ ok: false, error: { code: 'REMOTE_ERROR', message: 'unavailable' } })
     await expect(injected.list()).rejects.toThrow('pluginInventory.list failed: REMOTE_ERROR: unavailable')
+    await b.ctx.fiber.dispose()
+  })
+
+  it('toggles entries through the Remote only from a writable last-known snapshot', async () => {
+    const b = await bench()
+    declare(b.slots)
+    await b.ctx.plugin({ inject: [...inject], apply }).await()
+    const entry = b.slots.entries('settings.plugins.tab')[0]!
+    const injected = (entry.inject as unknown as () => PluginInventorySettingsTabInjected)()
+
+    await expect(injected.setEnabled(entryId('entry-1'), true)).rejects.toThrow('no inventory snapshot has been read')
+    expect(b.setEntryEnabled).not.toHaveBeenCalled()
+
+    b.list.mockResolvedValue({ ok: true, value: { entries: [], writable: false, live: false } })
+    await injected.list()
+    await expect(injected.setEnabled(entryId('entry-1'), true)).rejects.toThrow('not writable')
+    expect(b.setEntryEnabled).not.toHaveBeenCalled()
+
+    b.list.mockResolvedValue({ ok: true, value: EMPTY })
+    await injected.list()
+    await injected.setEnabled(entryId('entry-1'), false)
+    expect(b.setEntryEnabled).toHaveBeenCalledWith(entryId('entry-1'), false)
+
+    b.setEntryEnabled.mockResolvedValueOnce({ ok: false, error: { code: 'PATCH_WRITE_FAILED', message: 'disk full' } })
+    await expect(injected.setEnabled(entryId('entry-1'), false))
+      .rejects.toThrow('pluginInventory.setEntryEnabled failed: PATCH_WRITE_FAILED: disk full')
+
+    b.setEntryEnabled.mockResolvedValueOnce({
+      ok: false,
+      error: {
+        code: 'plugin-entry-not-applied',
+        message: 'did not activate',
+        details: { missingServices: ['workflowEngine'] },
+      },
+    })
+    const rejection = await injected.setEnabled(entryId('entry-1'), true).then(
+      () => { throw new Error('expected the toggle to reject') },
+      (error: unknown) => error as { code?: unknown; details?: unknown },
+    )
+    expect(rejection.code).toBe('plugin-entry-not-applied')
+    expect(rejection.details).toMatchObject({ missingServices: ['workflowEngine'] })
     await b.ctx.fiber.dispose()
   })
 

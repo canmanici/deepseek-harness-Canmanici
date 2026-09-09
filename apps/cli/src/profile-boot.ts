@@ -26,8 +26,10 @@ import {
   loadOverlayPatches,
   loadProfile,
   PROFILE_PATCH_FILENAME,
+  USER_PATCH_LAYER_KEY,
   watchUserPatches,
   type Profile,
+  type UserPatchLayerService,
 } from '@deepseek-ai/dsh-app-boot'
 import { resolveDshHome } from '@deepseek-ai/dsh-home-paths'
 import { DSH_LAUNCH_ENVIRONMENT_KEY, type LaunchEnvironmentSnapshot } from '@deepseek-ai/dsh-launch-environment'
@@ -68,6 +70,17 @@ function createAppReady(): { service: AppReady; commit(): void } {
  */
 export function homePatchPath(): string {
   return join(resolveDshHome(), PROFILE_PATCH_FILENAME)
+}
+
+/**
+ * The installation-level user patch-layer facts host services persist
+ * per-entry overrides against: which file receives the overrides, and whether
+ * edits to it re-apply onto the running tree without a restart.
+ * @param live - whether this profile's patch-reload lifecycle is `live`.
+ * @returns the service value to provide under {@link USER_PATCH_LAYER_KEY}.
+ */
+export function userPatchLayerService(live: boolean): UserPatchLayerService {
+  return { filename: homePatchPath(), live }
 }
 
 /** Absolute path of this dsh installation's package.json (both anchors: src/ and lib/ sit one level under apps/cli). */
@@ -253,6 +266,10 @@ export async function runProfile(options: RunProfileOptions): Promise<{ ctx: Con
     // Before any config-tree entry mounts, so plugins resolve all launch-time
     // environment values from the same immutable provenance snapshot.
     hostCtx.provide(DSH_LAUNCH_ENVIRONMENT_KEY, options.environment)
+    // The installation user patch layer, before any config-tree entry mounts:
+    // host services that persist per-entry overrides (the plugin inventory's
+    // enable/disable) resolve the write target and reload semantics from here.
+    hostCtx.provide(USER_PATCH_LAYER_KEY, userPatchLayerService(composed.profile.patchReload === 'live'))
     // The command line and bounded exit request are launcher facts available
     // to every app plugin that injects the argument snapshot.
     provideCmdline(hostCtx, {

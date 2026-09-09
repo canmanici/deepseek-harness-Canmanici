@@ -53,3 +53,9 @@ pre-push:
   jobs:
     - name: typecheck
       run: pnpm run typecheck
+    - name: file cap (250L hard)
+      run: node_modules/.bin/tsx scripts/verify-file-cap.ts
+    - name: audit (high)
+      run: pnpm audit --audit-level=high
+    - name: publint
+      run: pnpm run publint

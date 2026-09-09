@@ -118,8 +118,21 @@ function cookieValue(headerValue: string, name: string): string | undefined {
 }
 
 /** Serialize the fixed browser-session attributes; generated names and values are cookie-safe base64url. */
-function sessionCookie(name: string, value: string, expiresAt: number, maxAgeSeconds: number): string {
-  return `${name}=${value}; Max-Age=${String(maxAgeSeconds)}; Path=/; Expires=${new Date(expiresAt).toUTCString()}; HttpOnly; SameSite=Strict`
+function sessionCookie(
+  name: string,
+  value: string,
+  expiresAt: number,
+  maxAgeSeconds: number,
+  secure: boolean,
+): string {
+  const base = `${name}=${value}; Max-Age=${String(maxAgeSeconds)}; Path=/; Expires=${new Date(expiresAt).toUTCString()}; HttpOnly; SameSite=Strict`
+  return secure ? `${base}; Secure` : base
+}
+
+/** Whether the request authority is a loopback host where Secure would break http:// loopback. */
+function isLoopbackAuthority(authority: string): boolean {
+  const host = authority.split(':')[0] ?? ''
+  return host === 'localhost' || host === '127.0.0.1' || host === '::1' || host.startsWith('127.')
 }
 
 function signature(secret: Buffer, body: string): Buffer {
@@ -259,6 +272,7 @@ export class BrowserAuth {
           'referrer-policy': 'no-referrer',
           'set-cookie': sessionCookie(
             cookieName(authority), value, expiresAt, Math.floor(this.maxAgeMilliseconds / 1000),
+            !isLoopbackAuthority(authority),
           ),
         })
         res.end()

@@ -139,6 +139,7 @@
     "verify-module-graph": "tsx scripts/gen-module-graph.ts --check",
     "constraints": "tsx scripts/check-workspace-constraints.ts",
     "doc-sync": "tsx scripts/run-gates.ts doc-sync",
+    "verify-file-cap": "tsx scripts/verify-file-cap.ts",
     "hygiene": "tsx scripts/run-gates.ts hygiene",
     "publish:npm-baseline": "tsx scripts/publish-npm-baseline.ts",
     "release:dsh": "tsx scripts/release/bump.ts --family dsh",

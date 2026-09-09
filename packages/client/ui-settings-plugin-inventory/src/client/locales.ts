@@ -20,6 +20,17 @@ export const zh = {
   active: '已挂载',
   failed: '挂载失败',
   unloading: '卸载中',
+  enable: '启用',
+  disable: '停用',
+  confirmDisable: '确认停用',
+  cancel: '取消',
+  disableWarning: '停用后该插件将不再参与本次部署的加载。',
+  saving: '正在保存…',
+  saveFailed: '保存失败。',
+  notAppliedNeeds: '无法启用该条目：需先启用 {services}。',
+  readOnlyHint: '启用状态由部署（补丁文件或 CLI）决定，无法在此修改。',
+  liveEffect: '更改已实时生效。',
+  restartEffect: '更改将在应用重启后生效。',
 } satisfies Record<string, string>
 
 /** Plugin inventory locale key union. */
@@ -45,4 +56,15 @@ export const en = {
   active: 'Mounted',
   failed: 'Mount failed',
   unloading: 'Unloading',
+  enable: 'Enable',
+  disable: 'Disable',
+  confirmDisable: 'Confirm disable',
+  cancel: 'Cancel',
+  disableWarning: 'Disabling stops this plugin from loading in the current deployment.',
+  saving: 'Saving…',
+  saveFailed: 'Saving failed.',
+  notAppliedNeeds: 'Could not enable this entry: enable {services} first.',
+  readOnlyHint: 'Enablement is configured by this deployment (patch file or CLI) and cannot be changed here.',
+  liveEffect: 'The change is now in effect.',
+  restartEffect: 'The change takes effect after the app restarts.',
 } satisfies Record<PluginInventoryLocaleKey, string>

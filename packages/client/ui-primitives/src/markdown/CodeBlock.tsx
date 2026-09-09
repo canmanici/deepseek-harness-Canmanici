@@ -99,9 +99,10 @@ export function CodeBlock({ code, lang, streaming, className, copyLabel, copiedL
     })
   }, [copied, trimmed])
 
-  // shiki's HTML output is a static span tree it generated from `code` (no
+  // SECURITY-CHECKED: shiki's HTML output is a static span tree it generated from `code` (no
   // user HTML passes through), the sanctioned innerHTML consumption path per
-  // shiki's own docs.
+  // shiki's own docs. See security.md §5 — XSS via innerHTML is blocked because
+  // `highlightToHtml` escapes and only emits <span style>.
   const body = streamedBody !== undefined
     ? streamedBody
     : html === undefined

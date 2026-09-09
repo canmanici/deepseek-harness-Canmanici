@@ -162,6 +162,7 @@
     { "path": "./packages/session-query/session-query-sqlite" },
     { "path": "./packages/session-query/session-log-export/tsconfig.host.json" },
     { "path": "./packages/settings/settings" },
+    { "path": "./packages/integrations/studio" },
     { "path": "./packages/settings/settings-file" },
     { "path": "./packages/credentials/credentials" },
     { "path": "./packages/credentials/credentials-local" },

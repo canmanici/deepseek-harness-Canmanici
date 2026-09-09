@@ -123,6 +123,85 @@ describe('PiAiAdapter provider routing', () => {
     expect(server.headers[0]?.['user-agent']).toBe(userAgent())
   })
 
+  it('sends x-opencode-session on opencode-go completions when the loop stamped a session', async () => {
+    const server = await mockServer([{ events: textEvents }])
+    vi.stubEnv('PI_TEST_KEY', 'test-key')
+    const ctx = new Context()
+    await ctx.plugin(LlmRuntime)
+    await ctx.plugin(LlmPiAi, {
+      providers: { 'opencode-go': { apiKeyEnv: 'PI_TEST_KEY', baseURL: server.url } },
+    })
+    const result = await assemble(ctx, {
+      provider: 'opencode-go',
+      model: 'deepseek-v4-flash',
+      messages: [],
+      sessionId: 'session-opencode-1' as never,
+    })
+    expect(result.message.content).toEqual([{ type: 'text', text: 'hello' }])
+    expect(server.headers[0]?.['x-opencode-session']).toBe('session-opencode-1')
+  })
+
+  it('omits x-opencode-session on opencode-go without a session and lets a deployment override it', async () => {
+    const bare = await mockServer([{ events: textEvents }])
+    vi.stubEnv('PI_TEST_KEY', 'test-key')
+    const bareCtx = new Context()
+    await bareCtx.plugin(LlmRuntime)
+    await bareCtx.plugin(LlmPiAi, {
+      providers: { 'opencode-go': { apiKeyEnv: 'PI_TEST_KEY', baseURL: bare.url } },
+    })
+    await assemble(bareCtx, { provider: 'opencode-go', model: 'deepseek-v4-flash', messages: [] })
+    expect(bare.headers[0]?.['x-opencode-session']).toBeUndefined()
+
+    const pinned = await mockServer([{ events: textEvents }])
+    const pinnedCtx = new Context()
+    await pinnedCtx.plugin(LlmRuntime)
+    await pinnedCtx.plugin(LlmPiAi, {
+      providers: {
+        'opencode-go': {
+          apiKeyEnv: 'PI_TEST_KEY',
+          baseURL: pinned.url,
+          headers: { 'x-opencode-session': 'deployment-pin' },
+        },
+      },
+    })
+    await assemble(pinnedCtx, {
+      provider: 'opencode-go',
+      model: 'deepseek-v4-flash',
+      messages: [],
+      sessionId: 'session-opencode-1' as never,
+    })
+    expect(pinned.headers[0]?.['x-opencode-session']).toBe('deployment-pin')
+  })
+
+  it('sends x-opencode-session across opencode-go anthropic and responses paths, never on other providers', async () => {
+    const failure = (): { status: number; body: string } => ({ status: 401, body: '{}' })
+    for (const model of ['minimax-m3', 'gpt-5.6-luna']) {
+      const server = await mockServer([failure()])
+      vi.stubEnv('PI_TEST_KEY', 'test-key')
+      const ctx = new Context()
+      await ctx.plugin(LlmRuntime)
+      await ctx.plugin(LlmPiAi, {
+        providers: { 'opencode-go': { apiKeyEnv: 'PI_TEST_KEY', baseURL: server.url } },
+      })
+      await assemble(ctx, {
+        provider: 'opencode-go',
+        model,
+        messages: [],
+        sessionId: 'session-opencode-1' as never,
+      })
+      expect(server.headers[0]?.['x-opencode-session']).toBe('session-opencode-1')
+    }
+
+    const other = await mockServer([{ events: textEvents }])
+    const otherCtx = await harness(other.url)
+    await assemble(otherCtx, {
+      model: 'deepseek-v4-flash',
+      messages: [],
+      sessionId: 'session-opencode-1' as never,
+    })
+    expect(other.headers[0]?.['x-opencode-session']).toBeUndefined()
+  })
+
   it('forwards common stream options and profile reasoning', async () => {
     const server = await mockServer([{ events: textEvents }])
     const ctx = await harness(server.url, {

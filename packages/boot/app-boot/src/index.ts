@@ -51,6 +51,7 @@ export {
   type ProfilePatchReload,
   type ProfileTemplate,
 } from './profile.ts'
+export { USER_PATCH_LAYER_KEY, type UserPatchLayerService } from './user-patch-layer.ts'
 
 /**
  * Resolve the config to boot. Replay swaps a `cordis.yml` basename for

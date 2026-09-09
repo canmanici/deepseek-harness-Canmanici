@@ -1,0 +1,51 @@
+# Observability stack for Dokploy-hosted deepseek-harness — RED + saturation per observability.md §5/§6
+# Usage: docker compose -f compose.observability.yml up -d
+# Prometheus scrapes the gateway /metrics (histogram http_request_duration_seconds, counter http_requests_total)
+# Grafana provisions the RED dashboard + SLO burn-down widget (observability.md §2/§6)
+# Loki optional for structured JSON logs (request_id, route, status, latency_ms, user_id hashed)
+
+services:
+  prometheus:
+    image: prom/prometheus:v3.6.0
+    container_name: dsh-prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.retention.time=30d
+    volumes:
+      - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:12.2.0
+    container_name: dsh-grafana
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: "${GRAFANA_ADMIN_PASSWORD:-admin}"
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - ./observability/grafana/datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
+      - ./observability/grafana/dashboards.yml:/etc/grafana/provisioning/dashboards/dashboards.yml:ro
+      - ./observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+  loki:
+    image: grafana/loki:3.5.0
+    container_name: dsh-loki
+    command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - loki_data:/loki
+    ports:
+      - "3100:3100"
+    restart: unless-stopped
+
+volumes:
+  prometheus_data:
+  grafana_data:
+  loki_data:

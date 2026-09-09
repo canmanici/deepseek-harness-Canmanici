@@ -212,6 +212,41 @@ function requestHeaders(headers: Readonly<Record<string, string>> | undefined): 
 }
 
 /**
+ * OpenCode routing header OpenCode Go requires since 2026-09-06.
+ * `https://opencode.ai/docs/go/#where-can-i-use-it` asks every client to send
+ * a stable per-conversation id in `x-opencode-session` so Go routes repeats
+ * to one backend for prompt caching; without it Go answers
+ * `MissingSessionID`. The loop stamps every request with its session id, so
+ * that id is the stable value.
+ */
+const OPENCODE_SESSION_HEADER = 'x-opencode-session'
+
+/** Route keys whose catalog endpoint is OpenCode Zen or OpenCode Go. */
+const OPENCODE_SESSION_PROVIDERS: ReadonlySet<string> = new Set(['opencode', 'opencode-go'])
+
+/**
+ * Default OpenCode session header for one request.
+ * @param route - harness route key the request targets.
+ * @param baseUrl - resolved model endpoint the request will reach.
+ * @param sessionId - loop-stamped session identity, absent on hand-built calls without one.
+ * @param profileHeaders - deployment headers that win over this default.
+ * @returns the default header, or none when this route is not OpenCode, has no session, or names its own value.
+ */
+function opencodeSessionDefault(
+  route: string,
+  baseUrl: string,
+  sessionId: string | undefined,
+  profileHeaders: Readonly<Record<string, string>> | undefined,
+): Record<string, string> {
+  if (sessionId === undefined) return {}
+  const isOpencode = OPENCODE_SESSION_PROVIDERS.has(route) || baseUrl.includes('opencode.ai/zen')
+  if (!isOpencode) return {}
+  const overridden = Object.keys(profileHeaders ?? {}).some(name => name.toLowerCase() === OPENCODE_SESSION_HEADER)
+  if (overridden) return {}
+  return { [OPENCODE_SESSION_HEADER]: sessionId }
+}
+
+/**
  * pi-ai-backed multi-provider adapter. Each operation reads the current
  * profiles, so a configuration change reaches the next request without a
  * restart; model descriptors come from the collection those profiles built.
@@ -372,15 +407,20 @@ export class PiAiAdapter extends LlmAdapter {
             maxBytes: profile.requestImageMaxBytes,
           },
         }, onReplayDegrade)
+      const sessionId = options.sessionId === undefined ? undefined : String(options.sessionId)
       const events = snapshot.models.streamSimple(model, context, {
         ...profileOptions(profile, reasoning, apiKey),
         ...options.temperature === undefined ? {} : { temperature: options.temperature },
         ...options.maxTokens === undefined ? {} : { maxTokens: options.maxTokens },
-        ...options.sessionId === undefined ? {} : { sessionId: String(options.sessionId) },
+        ...sessionId === undefined ? {} : { sessionId },
         signal: watchdog.signal,
         // Profile headers are deployment-owned; attribution names are
-        // Harness-owned and therefore win collisions.
-        headers: requestHeaders(profile.headers),
+        // Harness-owned and therefore win collisions. The OpenCode default
+        // sits below the profile so an explicit deployment value still wins.
+        headers: requestHeaders({
+          ...opencodeSessionDefault(options.provider, model.baseUrl, sessionId, profile.headers),
+          ...profile.headers,
+        }),
       })
       const iterator = toStreamChunks(events, model.contextWindow, options.signal)[Symbol.asyncIterator]()
       let exhausted = false

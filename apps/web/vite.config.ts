@@ -147,6 +147,8 @@ export default defineConfig({
     // `modules` target (es2020-era) rejects that syntax.
     target: 'es2022',
     sourcemap: true,
+    // Perf budget: entry gz ≤200kB good / >400kB poor (observability.md §1). Vite warns raw; gz is ~35–45% of raw here.
+    chunkSizeWarningLimit: 200,
     rollupOptions: {
       input: {
         index: src('./index.html'),

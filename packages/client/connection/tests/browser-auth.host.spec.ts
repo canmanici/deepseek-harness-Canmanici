@@ -106,7 +106,11 @@ describe('BrowserAuth', () => {
       },
     })
     expect(login.state.headers?.['set-cookie']).toMatch(/; Max-Age=2592000; Path=\/; Expires=.*; HttpOnly; SameSite=Strict$/u)
+    // Loopback authorities omit Secure so http://127.0.0.1 works without TLS (security.md §5.1 exception).
     expect(login.state.headers?.['set-cookie']).not.toContain('Secure')
+    // Non-loopback must carry Secure — the production Dokploy edge is always HTTPS.
+    const lanExchange = exchange(first, '192.168.1.10:3080')
+    expect(lanExchange.state.headers?.['set-cookie']).toContain('; Secure')
     expect(first.isAuthenticated(request('/', '127.0.0.1:3080', { cookie: login.cookie }))).toBe(true)
     expect(first.isAuthenticated({
       headers: new Headers({ host: '127.0.0.1:3080', cookie: login.cookie }),
