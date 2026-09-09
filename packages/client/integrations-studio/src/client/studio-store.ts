@@ -1,10 +1,11 @@
 /**
  * The Integrations section's registry state.
  *
- * Business data lives in the object layer: the persisted document arrives
- * through the settings scope's snapshot, and the section's viewing state is
- * the only shared state this surface owns. One controller derives the view
- * from the scope and routes staged writes persistently.
+ * Business data lives in the object layer: the persisted-document snapshot
+ * arrives through the settings scope, and the section's viewing state (active
+ * tab, query, kind, category, staged draft) is the only shared state this
+ * surface owns. One controller derives the view from the scope and routes the
+ * staged writes persistently.
  *
  * @module studio-store
  */
@@ -46,6 +47,12 @@ export interface DeployedSkillEntry {
   deployedAt: string
 }
 
+/** The persisted `integrations-studio` document, as the scope narrows it. */
+export interface StudioDocument {
+  /** Deployed skills, in deployment order. */
+  skills: DeployedSkillEntry[]
+}
+
 /** The section's staged view state. */
 export interface IntegrationsStudioState {
   /** Active tab; the Marketplace is the resident default. */
@@ -58,6 +65,8 @@ export interface IntegrationsStudioState {
   category: string
   /** Staged studio draft. */
   draft: StudioDraftFields
+  /** Deployed skill entries, from the persisted snapshot. */
+  skills: readonly DeployedSkillEntry[]
 }
 
 /** The empty section view. */
@@ -67,90 +76,32 @@ export const EMPTY_STUDIO_STATE: IntegrationsStudioState = {
   kind: 'all',
   category: 'all',
   draft: { name: '', description: '', whenToUse: '', tags: '', instructions: '' },
+  skills: [],
 }
 
-/** The registration-side face the section's slot entry injects. */
-export interface IntegrationsStudioFace {
-  hooks: {
-    /** Section snapshot bound by the renderer as useIntegrationsStudio. */
-    studio: SnapshotStore<IntegrationsStudioState>
-  }
-}
-
-/** Build the section's face over one bound settings scope. */
-export class IntegrationsStudioController {
-  private readonly store: SnapshotStore<IntegrationsStudioState>
-  private readonly unsubscribe: () => void
-
-  /**
-   * @param scope - the bound settings scope for the `integrations-studio`
-   *   namespace; its snapshot is the one persisted-document reader.
-   */
-  constructor(readonly scope: SettingsScope<StudioDraftFields>) {
-    this.store = createSnapshotStore(EMPTY_STUDIO_STATE)
-    this.unsubscribe = scope.subscribe(() => { this.refresh() })
-    this.refresh()
-  }
-
-  /**
-   * Derive the view state and keep only tab viewing state in the store.
-   */
-  private refresh(): void { this.store.set({ ...this.store.getSnapshot() }) }
-
-  /**
-   * Replace one staged draft field.
-   * @param field - the draft field to replace.
-   * @param value - next draft value as the page edits it.
-   */
-  patchDraft<K extends keyof StudioDraftFields>(field: K, value: string): void {
-    this.store.set({
-      ...this.store.getSnapshot(),
-      draft: { ...this.store.getSnapshot().draft, [field]: value },
+/** Narrow one unknown wire section to the persisted document shape. */
+export function decodeStudioDocument(section: unknown): StudioDocument | undefined {
+  if (section === null || typeof section !== 'object') return undefined
+  const skills = (section as { skills?: unknown }).skills
+  if (!Array.isArray(skills)) return undefined
+  const entries: DeployedSkillEntry[] = []
+  for (const entry of skills) {
+    if (entry === null || typeof entry !== 'object') continue
+    const skill = entry as Record<string, unknown>
+    if (typeof skill.name !== 'string' || typeof skill.description !== 'string'
+      || typeof skill.instructions !== 'string' || typeof skill.deployedAt !== 'string') continue
+    entries.push({
+      name: skill.name,
+      description: skill.description,
+      whenToUse: typeof skill.whenToUse === 'string' ? skill.whenToUse : '',
+      instructions: skill.instructions,
+      deployedAt: skill.deployedAt,
     })
   }
-
-  /**
-   * Stage one whole draft replacement.
-   * @param fields - the next draft, whole-object.
-   */
-  setDraft(fields: StudioDraftFields): void {
-    this.patchState({ draft: fields })
-  }
-
-  private patchState(partial: Partial<IntegrationsStudioState>): void {
-    this.store.set({ ...this.store.getSnapshot(), ...partial })
-  }
-
-  /**
-   * Build the face the section's slot registration injects: the tab snapshot
-   * plus the complete staged-view mutation API.
-   * @returns the section's inject face.
-   */
-  inject(): IntegrationsStudioInjected {
-    return {
-      hooks: { studio: this.store },
-      actions: {
-        setTab: (tab) => { this.patchState({ tab }) },
-        setQuery: (query) => { this.patchState({ query }) },
-        setKind: (kind) => { this.patchState({ kind }) },
-        setCategory: (category) => { this.patchState({ category }) },
-        patchDraft: (field, value) => {
-          this.patchState({ draft: { ...this.store.getSnapshot().draft, [field]: value } })
-        },
-        setDraft: (fields) => { this.patchState({ draft: fields }) },
-      },
-    }
-  }
-
-  /**
-   * Stop following the scope; the registration effect captures the disposer.
-   */
-  dispose(): void {
-    this.unsubscribe()
-  }
+  return { skills: entries }
 }
 
-/** The state patch the section routes through the controller. */
+/** The section's staged-view mutation API. */
 export interface StudioActions {
   /** Show one tab. */
   setTab(tab: StudioTabId): void
@@ -177,4 +128,66 @@ export interface IntegrationsStudioInjected {
   }
   /** The section's staged-view mutation API. */
   actions: StudioActions
+}
+
+/** The settings-scope seam the controller binds (ui-settings contract's own face). */
+type StudioScope = SettingsScope<StudioDocument>
+
+/** Build the section's face over one bound settings scope. */
+export class IntegrationsStudioController {
+  private readonly store: SnapshotStore<IntegrationsStudioState>
+  private readonly unsubscribe: () => void
+
+  /** @param scope - the bound scope for the `integrations-studio` namespace. */
+  constructor(readonly scope: StudioScope) {
+    this.store = createSnapshotStore(EMPTY_STUDIO_STATE)
+    this.unsubscribe = scope.subscribe(() => { this.refreshSkills() })
+    this.refreshSkills()
+  }
+
+  /**
+   * Derive the deployed-skill entries from the scope's current snapshot.
+   */
+  private refreshSkills(): void {
+    const snapshot = this.scope.getSnapshot()
+    const document = decodeStudioDocument(snapshot.value)
+    this.store.set({ ...this.store.getSnapshot(), skills: document?.skills ?? [] })
+  }
+
+  /**
+   * Replace one staged view field, one call-site per member.
+   * @param field - the state member to replace.
+   * @param value - next value, as the section edits it.
+   */
+  patchState<K extends keyof IntegrationsStudioState>(field: K, value: IntegrationsStudioState[K]): void {
+    this.store.set({ ...this.store.getSnapshot(), [field]: value })
+  }
+
+  /**
+   * Build the face the section's slot registration injects: the tab snapshot
+   * plus the complete staged-view mutation API.
+   * @returns the section's inject face.
+   */
+  inject(): IntegrationsStudioInjected {
+    return {
+      hooks: { studio: this.store },
+      actions: {
+        setTab: (tab) => { this.patchState('tab', tab) },
+        setQuery: (query) => { this.patchState('query', query) },
+        setKind: (kind) => { this.patchState('kind', kind) },
+        setCategory: (category) => { this.patchState('category', category) },
+        patchDraft: (field, value) => {
+          this.patchState('draft', { ...this.store.getSnapshot().draft, [field]: value })
+        },
+        setDraft: (fields) => { this.patchState('draft', fields) },
+      },
+    }
+  }
+
+  /**
+   * Stop following the scope; the registration effect captures the disposer.
+   */
+  dispose(): void {
+    this.unsubscribe()
+  }
 }

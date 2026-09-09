@@ -1455,6 +1455,9 @@ importers:
       '@deepseek-ai/dsh-client-hmr':
         specifier: workspace:^
         version: link:../../client/hmr
+      '@deepseek-ai/dsh-client-integrations-studio':
+        specifier: workspace:^
+        version: link:../../client/integrations-studio
       '@deepseek-ai/dsh-client-locale':
         specifier: workspace:^
         version: link:../../client/locale
