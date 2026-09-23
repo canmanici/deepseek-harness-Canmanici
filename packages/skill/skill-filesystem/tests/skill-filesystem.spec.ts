@@ -603,6 +603,32 @@ describe('FileSystemSkillProvider', () => {
     expect(await ctx.skills.snapshot()).toEqual({ skills: [], complete: false })
   })
 
+  it('skips a filesystem skill file whose reported size exceeds the discovery read limit', async () => {
+    const home = await tempDir('skill-size-limit')
+    const root = join(home, '.dsh/skills')
+    await writeFlatSkill(root, 'small-skill', 'Small skill')
+    await writeFlatSkill(root, 'huge-skill', 'Huge skill')
+
+    const ctx = new Context()
+    await ctx.plugin(TestFileSystem)
+    const fs = ctx.fs as TestFileSystem
+    fs.statOverrides.set(join(root, 'huge-skill.md'), { version: FsVersion('huge'), type: 'file', size: 2 * 1024 * 1024 })
+    await ctx.plugin(SkillRegistry)
+    await ctx.plugin(SkillFileSystem, { dshHome: join(home, '.dsh'), agentsHome: join(home, '.agents'), watch: false })
+
+    expect((await ctx.skills.list({ cwd: home })).map(skill => skill.name)).toEqual(['small-skill'])
+  })
+
+  it('skips a native skill file larger than the discovery read limit', async () => {
+    const home = await tempDir('skill-native-size-limit')
+    const root = join(home, '.agents/skills')
+    await writeFlatSkill(root, 'small-native', 'Small native skill')
+    await writeFile(join(root, 'huge-native.md'), Buffer.alloc(1024 * 1024 + 1, 0x61))
+    const ctx = await setupLocal(home)
+
+    expect((await ctx.skills.list()).map(skill => skill.name)).toEqual(['small-native'])
+  })
+
   it('forwards cancellation to filesystem reads while loading a skill', async () => {
     const home = await tempDir('skill-read-abort')
     await writeSkill(join(home, '.dsh/skills'), 'abortable-skill', 'Abortable skill')

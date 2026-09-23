@@ -95,12 +95,17 @@ export interface PiAiProviderProfile {
   /** Name shown by configuration surfaces; defaults to the route key. */
   displayName?: string
   /**
-   * Wire protocol every model on this route speaks. Omission keeps each
-   * installed catalog model's own protocol, which is why a catalog route needs
-   * no protocol at all; a route the catalog does not ship must name one.
+   * Wire protocol this route's models speak unless a model entry names its own.
+   * Omission keeps each installed catalog model's own protocol, which is why a
+   * catalog route needs no protocol at all; a route the catalog does not ship
+   * must name one unless every model entry does.
    */
   api?: string
-  /** Endpoint for this route's models; defaults to the installed catalog's endpoint. */
+  /**
+   * Endpoint this route's models use unless a model entry names its own;
+   * defaults to the installed catalog's endpoint. A route the catalog does not
+   * ship must name one unless every model entry does.
+   */
   baseURL?: string
   /**
    * This route's model catalog. Omission serves the installed catalog for the
@@ -150,6 +155,16 @@ export interface PiAiProviderProfile {
   defaultInput?: PiAiModality[]
   /** Provider request headers, validated against Fetch when the profile resolves; Harness attribution wins reserved names. */
   headers?: Record<string, string>
+  /**
+   * Header name that carries this route's conversation id on every model
+   * request — OpenCode Go requires `x-opencode-session`. The value is the
+   * request's session id, so a gateway routing by conversation sees one stable
+   * id across that conversation's turns, resumes, compactions, and retries,
+   * and a fresh id for a new conversation or fork. It replaces a same-named
+   * `headers` entry, because a fixed value cannot do a per-conversation id's
+   * job; the static entry still covers a request that names no session id.
+   */
+  sessionHeader?: string
   /** Provider-neutral pi-ai reasoning level. */
   reasoning?: ModelThinkingLevel
   /** Token budgets used by reasoning providers that support them. */
@@ -302,6 +317,8 @@ const reasoningEfforts = z.dict(
 /** The fields a `models` entry and a `modelOverrides` value share; only the id's home differs. */
 const modelFields = {
   name: z.string(),
+  api: z.union(supportedProtocols()),
+  baseURL: z.string(),
   contextWindow: z.number().step(1).min(1),
   maxTokens: z.number().step(1).min(1),
   // No explicit default, unlike the route's `defaultInput`: schemastery
@@ -335,6 +352,7 @@ const profile = z.object({
   defaultMaxTokens: z.number().step(1).min(1).default(DEFAULT_MAX_TOKENS),
   defaultInput: z.array(z.union(MODALITIES)).default([...DEFAULT_INPUT]),
   headers: z.dict(z.string()),
+  sessionHeader: z.string(),
   reasoning: z.union(THINKING_LEVELS),
   thinkingBudgets,
   cacheRetention: z.union(['none', 'short', 'long']),
@@ -399,6 +417,21 @@ function assertValidHeaders(provider: string, headers: Readonly<Record<string, s
   }
 }
 
+/** Reject a conversation-header name Fetch cannot put on a provider request. */
+function assertValidSessionHeader(provider: string, name: string | undefined): void {
+  if (name === undefined) return
+  if (name.length === 0) {
+    throw new Error(`llm-pi-ai: provider "${provider}" has an empty sessionHeader`)
+  }
+  try {
+    new Headers([[name, 'value']])
+  } catch {
+    throw new Error(
+      `llm-pi-ai: provider "${provider}" sessionHeader "${name}" is not a valid HTTP field name`,
+    )
+  }
+}
+
 /**
  * Resolve scalar defaults and materialize each route's serviceable models.
  * Deferred catalog validation retains diagnostics without deleting configured
@@ -426,6 +459,7 @@ export function resolveProfiles(
       throw new Error(`llm-pi-ai: provider "${provider}" has an empty displayName`)
     }
     assertValidHeaders(provider, source.headers)
+    assertValidSessionHeader(provider, source.sessionHeader)
     const streamIdleTimeoutMs = source.streamIdleTimeoutMs ?? DEFAULT_STREAM_IDLE_TIMEOUT_MS
     if (!Number.isFinite(streamIdleTimeoutMs)
       || streamIdleTimeoutMs <= 0

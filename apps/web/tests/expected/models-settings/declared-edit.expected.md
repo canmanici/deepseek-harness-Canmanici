@@ -47,6 +47,15 @@
             - /placeholder: 显示名称
           - button "模型选项 1" [expanded]
           - button "删除模型 1"
+          - text: API 协议
+          - combobox "API 协议 1":
+            - option "未选择" [selected]
+            - option "OpenAI Chat Completions"
+            - option "OpenAI Responses"
+            - option "Anthropic Messages"
+          - text: API 地址
+          - textbox "API 地址 1":
+            - /placeholder: 提供商默认
           - text: 上下文窗口
           - textbox "上下文窗口 1":
             - /placeholder: 256K

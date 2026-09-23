@@ -41,7 +41,8 @@ const USER_AGENTS_RANK = 500
 const DEFAULT_WATCH_STABILITY_THRESHOLD_MS = 200
 const DEFAULT_WATCH_POLL_INTERVAL_MS = 100
 const DEFAULT_WATCH_MAX_PROJECTS = 128
-
+/** Upper bound on one skill file's text; a workspace-owned file must not size the discovery read. */
+const MAX_SKILL_FILE_BYTES = 1024 * 1024
 export const name = 'skill-filesystem'
 export const inject = ['skills']
 
@@ -851,6 +852,11 @@ async function readSkillText(ctx: Context, path: string, signal?: AbortSignal, t
   }
   try {
     const resolvedPath = await realpath(path)
+    const info = await stat(resolvedPath)
+    if (info.size > MAX_SKILL_FILE_BYTES) {
+      ctx.logger.warn(`skill file ${path} ignored: ${String(info.size)} bytes exceeds the ${String(MAX_SKILL_FILE_BYTES)}-byte skill file limit`)
+      return undefined
+    }
     return { path: resolvedPath, content: await readFile(resolvedPath, { encoding: 'utf8', signal }) }
   } catch (error) {
     signal?.throwIfAborted()
@@ -881,6 +887,10 @@ async function readSkillTextFromFileSystem(
     throw error
   }
   if (info === undefined || info.type !== 'file') return undefined
+  if (info.size !== undefined && info.size > MAX_SKILL_FILE_BYTES) {
+    ctx.logger.warn(`skill file ${path} ignored: ${String(info.size)} bytes exceeds the ${String(MAX_SKILL_FILE_BYTES)}-byte skill file limit`)
+    return undefined
+  }
   try {
     return { path: fs.processPath(target), content: await fs.readText(target, signal) }
   } catch (error) {

@@ -47,6 +47,30 @@ export type {
 export const SENSITIVE_ENV_PATTERN = /KEY|PASSWORD|SECRET|TOKEN/i
 
 /**
+ * Environment names that carry a credential or the location of one without
+ * matching {@link SENSITIVE_ENV_PATTERN}: agent sockets, cloud credential-file
+ * pointers, registry auth, and package-manager auth. A name heuristic cannot
+ * see the value behind them, so they are denied by name; a deliberate entry in
+ * the spawn spec's explicit `env` still merges after the scrub. Compared
+ * case-insensitively because Windows environment names are.
+ */
+export const SENSITIVE_ENV_NAMES: ReadonlySet<string> = new Set([
+  'AWS_CONFIG_FILE',
+  'AWS_PROFILE',
+  'AWS_SHARED_CREDENTIALS_FILE',
+  'AZURE_CONFIG_DIR',
+  'DOCKER_CONFIG',
+  'GOOGLE_APPLICATION_CREDENTIALS',
+  'KUBECONFIG',
+  'NETRC',
+  'NPM_CONFIG__AUTH',
+  'NPM_CONFIG__AUTHTOKEN',
+  'SSH_AGENT_PID',
+  'SSH_ASKPASS',
+  'SSH_AUTH_SOCK',
+])
+
+/**
  * The ambient parent environment minus credential-shaped names and minus all
  * `DSH_*` names — the canonical base every harness child starts from. `PATH`,
  * `HOME`, locale, and proxy variables survive, so child CLIs run normally;
@@ -66,7 +90,10 @@ export const SENSITIVE_ENV_PATTERN = /KEY|PASSWORD|SECRET|TOKEN/i
 export function scrubbedParentEnv(): Record<string, string> {
   const env: Record<string, string> = {}
   for (const [key, value] of Object.entries(process.env)) {
-    if (value !== undefined && !SENSITIVE_ENV_PATTERN.test(key) && !key.toUpperCase().startsWith(DSH_ENV_PREFIX)) env[key] = value
+    if (value === undefined) continue
+    const upper = key.toUpperCase()
+    if (SENSITIVE_ENV_PATTERN.test(key) || upper.startsWith(DSH_ENV_PREFIX) || SENSITIVE_ENV_NAMES.has(upper)) continue
+    env[key] = value
   }
   // A child Node ignores the inherited proxy variables unless the flag this adds is set, so an MCP
   // stdio server or subagent CLI would connect directly while its parent proxies. The same overlay

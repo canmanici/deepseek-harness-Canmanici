@@ -83,3 +83,19 @@ it('does not fold non-ASCII characters when resolving part names', async () => {
   files['xl/worksheets/ä.xml'] = sheet
   await expect(convertExcel(new Uint8Array(zipSync(files)), 'xlsx', limits)).rejects.toMatchObject({ code: 'invalid' })
 })
+
+it('refuses an archive whose entries declare more expansion than the preview limit', () => {
+  const zip = new Uint8Array(zipSync({ 'xl/worksheets/sheet1.xml': new Uint8Array(8).fill(0x41) }, { level: 0 }))
+  // A stored entry carries its compressed and uncompressed sizes as adjacent
+  // 4-byte little-endian fields in both the local header and the central directory.
+  const declared = Uint8Array.from([8, 0, 0, 0, 8, 0, 0, 0])
+  const forged = Uint8Array.from([0xff, 0xff, 0xff, 0x7f, 0xff, 0xff, 0xff, 0x7f])
+  let patched = 0
+  for (let offset = 0; offset + declared.length <= zip.length; offset += 1) {
+    if (!declared.every((byte, index) => zip[offset + index] === byte)) continue
+    zip.set(forged, offset)
+    patched += 1
+  }
+  expect(patched).toBeGreaterThan(0)
+  expect(() => new XlsxPreviewArchive(zip)).toThrow('expands beyond the preview limit')
+})

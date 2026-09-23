@@ -477,6 +477,7 @@ export function ProviderEditor(props: ProviderEditorProps): ReactNode {
                 <ModelListEditor
                   {...catalogProps}
                   catalogProvider={props.declared === true ? undefined : props.provider}
+                  protocolChoices={protocols}
                   defaultInput={Array.isArray(defaultInput) ? defaultInput : undefined}
                   probe={probe}
                   probeBlocked={keyFailure}

@@ -121,6 +121,28 @@ function describeRejected(value: unknown): string {
 }
 
 /**
+ * Refuse loader expression markers in caller-supplied values. The Loader
+ * evaluates any object carrying `__jsExpr` when the owning entry activates, so
+ * a marker reaching a durable config value is arbitrary JavaScript in the host
+ * process; no settings field declares one.
+ * @param value - caller-supplied JSON-shaped value.
+ * @param path - diagnostics path for the offending marker.
+ */
+function rejectLoaderExpression(value: unknown, path: string, visiting = new WeakSet<object>()): void {
+  if (Array.isArray(value)) {
+    if (visiting.has(value)) return
+    visiting.add(value)
+    value.forEach((entry, index) => rejectLoaderExpression(entry, `${path}[${index}]`, visiting))
+    return
+  }
+  if (!isPlainObject(value)) return
+  if (visiting.has(value)) return
+  visiting.add(value)
+  if (Object.hasOwn(value, '__jsExpr')) throw new TypeError(`Config ${path} contains a loader expression marker`)
+  for (const [key, entry] of Object.entries(value)) rejectLoaderExpression(entry, `${path}.${key}`, visiting)
+}
+
+/**
  * Detach and validate one write input in a single walk before persistence:
  * only JSON data (plain objects, arrays, strings, finite numbers,
  * booleans, `null`) may reach a provider document. `structuredClone` alone
@@ -134,6 +156,7 @@ function describeRejected(value: unknown): string {
 function cloneJsonShaped(root: object): Record<string, unknown> {
   const reject = (label: string, path: string): TypeError => new TypeError(`Config ${path} contains ${label}`)
   if (!isPlainObject(root)) throw reject('a non-plain root', '$')
+  rejectLoaderExpression(root, '$')
   const visiting = new WeakSet<object>()
   const clone = (value: unknown, path: string): unknown => {
     if (value === null || typeof value === 'string' || typeof value === 'boolean') return value
@@ -365,6 +388,7 @@ export class SettingsForms extends Service {
    * @param expectedRevision Revision returned by describe.
    */
   async mutate(ns: string, ops: readonly SettingsPathOp[], expectedRevision?: number): Promise<void> {
+    for (const op of ops) if (op.op === 'set') rejectLoaderExpression(op.value, op.path.join('.'))
     await this.write(ns, (current, base, schema) => ops.reduce((value, op) => {
       if (op.op === 'set') return applyPathOp(value, op, schema)
       const parent = op.path.slice(0, -1).reduce<unknown>((node, key) => member(node, key), value)

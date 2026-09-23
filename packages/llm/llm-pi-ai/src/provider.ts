@@ -90,7 +90,12 @@ export interface ProviderSpec {
   provider: string
   /** Display name for selectors and status labels. */
   displayName: string
-  /** Wire protocol override; absent means each model keeps its catalog protocol. */
+  /**
+   * Route-level wire protocol override; absent means each model keeps its own.
+   * The provider dispatches every model through the protocol that model
+   * carries, so a route may serve more than one — a catalog whose models
+   * disagree, or a gateway publishing several wire formats.
+   */
   api?: string
   /** Endpoint override already applied to {@link models}; kept for provider-level display. */
   baseURL?: string
@@ -159,10 +164,31 @@ function reuseCatalogProvider(base: Provider, spec: ProviderSpec): Provider {
 }
 
 /**
+ * The protocol implementation one named protocol loads, or a refusal naming
+ * what this build serves.
+ * @param provider - route key, for diagnostics.
+ * @param api - protocol identifier to load.
+ * @param model - model id when a model entry named the protocol, for diagnostics.
+ * @returns pi-ai's implementation of that protocol.
+ * @throws PiAiCatalogError when this build serves no such protocol.
+ */
+function protocolImplementation(provider: string, api: string, model?: string): ProviderStreams {
+  const factory = PROTOCOLS[api]
+  if (factory === undefined) {
+    throw new PiAiCatalogError(
+      `llm-pi-ai: provider "${provider}" ${model === undefined ? 'names' : `model "${model}" names`} api "${api}",`
+      + ` which this build cannot serve; supported protocols are ${supportedProtocols().join(', ')}`,
+    )
+  }
+  return factory()
+}
+
+/**
  * Build the pi-ai provider for one resolved route.
  * @param spec - the resolved route facts.
  * @returns the provider to register in the adapter's `Models` collection.
- * @throws Error when the route names a wire protocol this build cannot serve.
+ * @throws Error when the route or one of its models names a wire protocol this
+ *   build cannot serve.
  */
 export function buildProvider(spec: ProviderSpec): Provider {
   const catalog = catalogProvider(spec.provider)
@@ -171,14 +197,21 @@ export function buildProvider(spec: ProviderSpec): Provider {
   // different wire format, which only the protocol table can serve.
   if (catalog !== undefined && spec.api === undefined) return reuseCatalogProvider(catalog, spec)
 
-  // Every model on this path carries the route's protocol: model resolution
-  // requires one for a route the catalog cannot default, and an explicit one
-  // replaces each catalog model's own. So the route has a single API.
-  const factory = spec.api === undefined ? undefined : PROTOCOLS[spec.api]
-  if (factory === undefined) {
+  // The route's own protocol, when it names one: a model entry that names none
+  // resolves to it, and naming one this build cannot serve is refused here
+  // rather than at the first request.
+  const api: Record<string, ProviderStreams> = {}
+  if (spec.api !== undefined) api[spec.api] = protocolImplementation(spec.provider, spec.api)
+  // Each model dispatches through the protocol it carries, because the model
+  // record is the only place that says which one reaches it: an entry may
+  // override the route, and a model the catalog describes keeps its own.
+  for (const model of spec.models) {
+    api[model.api] ??= protocolImplementation(spec.provider, model.api, model.id)
+  }
+  if (Object.keys(api).length === 0) {
     throw new PiAiCatalogError(
-      `llm-pi-ai: provider "${spec.provider}" names api "${spec.api}", which this build cannot serve;`
-      + ` supported protocols are ${supportedProtocols().join(', ')}`,
+      `llm-pi-ai: provider "${spec.provider}" names no wire protocol and serves no model; a route must`
+      + ' name an api, or its models must name their own',
     )
   }
   return createProvider({
@@ -187,6 +220,6 @@ export function buildProvider(spec: ProviderSpec): Provider {
     ...spec.baseURL === undefined ? {} : { baseUrl: spec.baseURL },
     auth: routeAuth(spec, catalog),
     models: spec.models,
-    api: factory(),
+    api,
   })
 }

@@ -682,7 +682,7 @@ interface ToolSchema {
 
 The model-facing `ToolSchema` is the wire type; the registered `ToolDefinition` that produces it (schema + `execute`) is on [tools.md](tools.md).
 
-A provider a surface is still drafting has no route and no catalog, so interrogation is described separately: the request carries the draft the user is editing, and the reply is candidates a surface may adopt rather than a catalog it must serve.
+A provider a surface is still drafting has no route and no catalog, so interrogation is described separately: the request carries the draft the user is editing, and the reply is candidates a surface may adopt rather than a catalog it must serve. A caller may also ask for a live answer on a route its adapter already describes, which is how a model newer than that adapter's installed catalog reaches the surface.
 
 ```ts type-equiv
 /**
@@ -696,9 +696,17 @@ interface LlmModelDiscoveryRequest {
    * Route the draft is editing, when it edits an existing one. A route whose
    * adapter already knows its models answers from that knowledge instead of
    * asking the endpoint — the adapter's own registry is the better answer, and
-   * it costs no network call.
+   * it costs no network call — unless {@link live} asks for the endpoint too.
    */
   provider?: string
+  /**
+   * Whether the caller wants a live answer for a route the adapter already
+   * describes. Absent keeps the adapter's own answer, which costs no network
+   * call and carries facts a listing does not disclose; `true` asks the
+   * route's endpoint as well, so a model newer than the adapter's installed
+   * knowledge still appears. A route no adapter describes is asked either way.
+   */
+  live?: boolean
   /**
    * Endpoint to interrogate. Optional because a route the adapter already
    * describes needs none; a route it does not must supply one.

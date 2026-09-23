@@ -3,6 +3,14 @@ import { unzipSync, zipSync, type Unzipped } from 'fflate'
 import { XMLParser } from 'fast-xml-parser'
 import type { ExcelUnsupportedFeature } from './model.ts'
 
+/**
+ * Total uncompressed bytes one preview copy may expand to. The Excel config's
+ * `maxBytes` bounds the compressed input, not what a crafted archive declares
+ * for its entries, and `unzipSync` allocates from the declared sizes before any
+ * cell limit applies.
+ */
+const MAX_UNCOMPRESSED_ARCHIVE_BYTES = 128 * 1024 * 1024
+
 /** Owns the unpacked preview copy and its detected unsupported content. */
 export class XlsxPreviewArchive {
   /** Detected workbook content that the preview does not display. */
@@ -16,7 +24,16 @@ export class XlsxPreviewArchive {
    * @throws When ZIP entries have ASCII case-equivalent names.
    */
   constructor(private readonly bytes: Uint8Array<ArrayBuffer>) {
-    this.files = unzipSync(bytes)
+    let expanded = 0
+    this.files = unzipSync(bytes, {
+      filter: (file) => {
+        expanded += file.originalSize
+        if (file.originalSize > MAX_UNCOMPRESSED_ARCHIVE_BYTES || expanded > MAX_UNCOMPRESSED_ARCHIVE_BYTES) {
+          throw new Error('XLSX archive expands beyond the preview limit')
+        }
+        return true
+      },
+    })
     for (const [path, bytes] of Object.entries(this.files)) {
       if (path.endsWith('/')) continue
       const key = partKey(path)

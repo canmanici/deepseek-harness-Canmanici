@@ -13,9 +13,11 @@ import { openSettings, saveFailureShot, ZH_BROWSER_LOCALE } from './support.ts'
 
 const EXPECTED = fileURLToPath(new URL('./expected/models-settings-recovery/stored-error.expected.md', import.meta.url))
 const FAILURE = 'llm-pi-ai: provider "openrouter" model "111" needs an api; '
-  + 'the installed catalog does not describe it, so set the route\'s api to the wire protocol its endpoint speaks'
+  + 'the installed catalog does not describe it, so set the model\'s api to the wire protocol its endpoint'
+  + ' speaks, or the route\'s api when every model shares one'
 const CUSTOM_FAILURE = 'llm-pi-ai: provider "acme-gateway" model "custom-model" needs an api; '
-  + 'the installed catalog does not describe it, so set the route\'s api to the wire protocol its endpoint speaks'
+  + 'the installed catalog does not describe it, so set the model\'s api to the wire protocol its endpoint'
+  + ' speaks, or the route\'s api when every model shares one'
 
 describe('web e2e: repairs a stored provider after catalog drift', () => {
   let home: string

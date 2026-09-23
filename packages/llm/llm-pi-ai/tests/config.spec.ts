@@ -57,6 +57,13 @@ describe('reasoning schema boundary', () => {
   })
 })
 
+describe('per-model protocol schema boundary', () => {
+  it('accepts a served protocol on a model entry and refuses one pi-ai does not serve', () => {
+    expect(configWith({ api: 'openai-responses', baseURL: 'https://acme.test/anthropic' })).not.toThrow()
+    expect(configWith({ api: 'quantum-messages' })).toThrow(/expected/)
+  })
+})
+
 describe('modality schema boundary', () => {
   it('rejects a modality pi-ai does not know, at either level', () => {
     expect(configWith({ input: ['audio'] })).toThrow(/expected/)

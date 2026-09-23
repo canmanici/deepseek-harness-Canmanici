@@ -50,9 +50,33 @@ describe('pi-ai gateway compatibility declarations', () => {
     expect(() => resolved(compat, 'anthropic-messages')).toThrow(/compat/)
   })
 
-  it.each(['supportsMidConvoEffort', 'allowedFallbackModels'])('withholds catalog-owned %s', (field) => {
-    expect(() => resolved({ [field]: true }, 'anthropic-messages'))
+  it.each(['supportsMidConvoEffort', 'allowedFallbackModels', 'supportsMidConvoSystemMessages', 'supportsMidConvoToolChanges', 'sessionAffinityFormat'])(
+    'withholds catalog-owned %s',
+    (field) => {
+      expect(() => resolved({ [field]: true }, 'anthropic-messages'))
+        .toThrow(/which is not configurable here/)
+    },
+  )
+
+  it.each(['supportsMidConvoSystemMessages', 'supportsMidConvoToolAdditions', 'sendSessionAffinityHeaders', 'sessionAffinityFormat'])(
+    'withholds catalog-owned %s on openai-completions',
+    (field) => {
+      expect(() => resolved({ [field]: true })).toThrow(/which is not configurable here/)
+    },
+  )
+
+  it('withholds catalog-owned supportsMidConvoSystemMessages on openai-responses', () => {
+    expect(() => resolved({ supportsMidConvoSystemMessages: true }, 'openai-responses'))
       .toThrow(/which is not configurable here/)
+  })
+
+  it('withholds catalog-owned supportsMidConvoSystemMessages on mistral-conversations', () => {
+    // A Mistral catalog route reaches the gate through its own protocol; the
+    // field stays catalog-owned there like every other vendor capability. The
+    // withheld name is outside the profile type, so it is built untyped.
+    const compat: Record<string, unknown> = { supportsMidConvoSystemMessages: true }
+    const providers = structuredClone(Config({ providers: { mistral: { compat } } }).providers.get()) as import('../src/config.ts').Options['providers']
+    expect(() => resolveProfiles(providers)).toThrow(/which is not configurable here/)
   })
 
   it('keeps generic additions absent unless configured', () => {

@@ -36,6 +36,16 @@ it('isolates instances, hides ordinary fields, rejects invalid edits, and redact
   expect(ctx.settings.describe({ redactSecrets: true }).find(row => row.ns === 'first')!.value).toEqual({ count: 2, list: [] })
 })
 
+it('refuses loader expression markers in supplied values', async () => {
+  const { ctx, profile } = await fixture()
+  const before = readFileSync(profile.patchPath, 'utf8')
+  await expect(ctx.settings.update('first', { count: { __jsExpr: 'process.exit(1)' } }))
+    .rejects.toThrow('loader expression marker')
+  await expect(ctx.settings.mutate('first', [{ op: 'set', path: ['count'], value: [{ __jsExpr: 'process.exit(1)' }] }]))
+    .rejects.toThrow('loader expression marker')
+  expect(readFileSync(profile.patchPath, 'utf8')).toBe(before)
+})
+
 it('refuses an edit shadowed by a higher home layer', async () => {
   const { ctx, home, profile } = await fixture()
   writeFileSync(join(home, 'cordis.patch.yml'), JSON.stringify([{ id: 'default-model', config: { provider: 'test', model: 'home' } }]))

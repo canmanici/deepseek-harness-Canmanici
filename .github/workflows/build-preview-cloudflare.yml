@@ -92,7 +92,7 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
-          npx --yes wrangler@4 pages deploy apps/web/dist \
+          npx --yes wrangler@4.136.3 pages deploy apps/web/dist \
             --project-name "$CF_PROJECT" \
             --branch "pr-${{ github.event.pull_request.number }}" \
             --commit-dirty=true

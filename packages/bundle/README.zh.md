@@ -1,5 +1,5 @@
 ---
-description: "共享核心、浏览器 GUI、一次性任务、ACP（Agent Client Protocol）与 SDK 应用表层的现成 dsh profile 组合包。"
+description: "共享核心、浏览器 GUI、一次性任务、ACP（Agent Client Protocol）、SDK 与可选外部能力的现成 dsh profile 组合包。"
 kind: "package-group"
 ---
 
@@ -26,6 +26,7 @@ kind: "package-group"
 | [`acp-app`](acp-app/README.zh.md) | 基于 base、仅用于自动化的 ACP stdio 应用 | 挂载 ACP bridge |
 | [`web-app`](web-app/README.zh.md) | 基于 base 的浏览器应用层 | 挂载多条 Web 配置行 |
 | [`headless`](headless/README.zh.md) | 基于 base 的一次性命令行任务应用 | `headless-runner` |
+| [`open-design`](open-design/README.zh.md) | profile 智能体可选的 OpenDesign MCP 工具 | `mcp-open-design` |
 | [`sdk-app`](sdk-app/README.zh.md) | 基于 base 的 SDK JSON-RPC stdio 应用 | 挂载 SDK 服务器 |
 | [`sdk-minimal`](sdk-minimal/README.zh.md) | 不使用 base 或 Web 的独立极简 SDK 应用 | —（完整 patch 树） |
 

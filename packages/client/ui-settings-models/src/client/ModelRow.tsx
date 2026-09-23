@@ -7,6 +7,7 @@ import {
 import type { DeepSeekModelDraft } from './DeepSeekModelsEditor.tsx'
 import type { ModelsKey } from './locales.ts'
 import { ModelInputTypes } from './ModelInputTypes.tsx'
+import { protocolLabel } from './protocol-label.ts'
 import styles from './ModelsSection.module.css'
 
 /** A capacity's editable text and adapter-specific inherited hint. */
@@ -15,6 +16,24 @@ interface CapacityInput {
   placeholder: string
   onChange: (value: string) => void
   onBlur?: () => void
+}
+
+/**
+ * Per-model protocol and endpoint, for an adapter whose models may speak
+ * different ones. Absent values inherit: the route's, then the installed
+ * catalog entry's.
+ */
+export interface ModelProtocolFields {
+  /** Protocol this row names, or `undefined` to inherit. */
+  api: string | undefined
+  /** Every protocol the adapter accepts. */
+  choices: readonly string[]
+  /** Set or clear this row's protocol. */
+  onApiChange: (api: string | undefined) => void
+  /** Endpoint this row names, or `undefined` to inherit. */
+  baseURL: string | undefined
+  /** Set or clear this row's endpoint. */
+  onBaseURLChange: (baseURL: string | undefined) => void
 }
 
 /** Adapter-owned data and actions for one model row. */
@@ -29,6 +48,8 @@ interface ModelRowProps {
   t: (key: ModelsKey) => string
   contextWindow: CapacityInput
   maxTokens: CapacityInput
+  /** Present for adapters whose models may declare their own protocol and endpoint. */
+  protocol?: ModelProtocolFields | undefined
   onFieldChange: (field: 'id' | 'name', value: string | undefined) => void
   onIdBlur?: (value: string) => void
   onChange: (model: DeepSeekModelDraft) => void
@@ -42,7 +63,7 @@ interface ModelRowProps {
  * @returns one expandable model entry.
  */
 export function ModelRow(props: ModelRowProps): ReactNode {
-  const { model, position, t, disabled } = props
+  const { model, position, t, disabled, protocol } = props
   return (
     <div className={styles['modelEntry']}>
       <div className={styles['modelRow']}>
@@ -86,6 +107,43 @@ export function ModelRow(props: ModelRowProps): ReactNode {
       {props.expanded
         ? (
           <div className={styles['modelAdvanced']}>
+            {protocol === undefined
+              ? null
+              : (
+                <>
+                  <label className={styles['modelField']}>
+                    <span className={styles['modelFieldLabel']}>{t('customApi')}</span>
+                    <select
+                      className={`${styles['input']} ${styles['selectInput']}`}
+                      value={protocol.api ?? ''}
+                      aria-label={`${t('customApi')} ${String(position)}`}
+                      disabled={disabled}
+                      onChange={(event) => {
+                        protocol.onApiChange(event.target.value === '' ? undefined : event.target.value)
+                      }}
+                    >
+                      <option value="">{t('customApiUnset')}</option>
+                      {protocol.choices.map(choice => (
+                        <option key={choice} value={choice}>{protocolLabel(t, choice)}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className={styles['modelField']}>
+                    <span className={styles['modelFieldLabel']}>{t('baseUrl')}</span>
+                    <input
+                      className={styles['input']}
+                      type="text"
+                      value={protocol.baseURL ?? ''}
+                      placeholder={t('baseUrlDefault')}
+                      aria-label={`${t('baseUrl')} ${String(position)}`}
+                      disabled={disabled}
+                      onChange={(event) => {
+                        protocol.onBaseURLChange(event.target.value === '' ? undefined : event.target.value)
+                      }}
+                    />
+                  </label>
+                </>
+              )}
             {(['contextWindow', 'maxTokens'] as const).map(field => (
               <label className={styles['modelField']} key={field}>
                 <span className={styles['modelFieldLabel']}>{t(field)}</span>

@@ -20,6 +20,7 @@ import type {
   BedrockCompat,
   ChatTemplateKwargValue,
   KnownApi,
+  MistralConversationsCompat,
   Model,
   ModelCost,
   ModelThinkingLevel,
@@ -253,8 +254,9 @@ const COMPLETIONS_COMPAT_GATE = {
   zaiToolStream: 'withhold',
   supportsOpenAIGrammarTools: 'withhold',
   sendSessionAffinityHeaders: 'withhold',
-  deferredToolsMode: 'withhold',
   sessionAffinityFormat: 'withhold',
+  supportsMidConvoSystemMessages: 'withhold',
+  supportsMidConvoToolAdditions: 'withhold',
 } as const satisfies Record<keyof OpenAICompletionsCompat, CompatDisposition>
 
 /** Disposition of every `OpenAIResponsesCompat` field; a drift gate like the one above. */
@@ -268,6 +270,7 @@ const RESPONSES_COMPAT_GATE = {
   supportsAdditionalTools: 'withhold',
   supportsToolSearch: 'withhold',
   supportsExplicitPromptCacheMode: 'withhold',
+  supportsMidConvoSystemMessages: 'withhold',
 } as const satisfies Record<keyof OpenAIResponsesCompat, CompatDisposition>
 
 /** Disposition of every `AnthropicMessagesCompat` field; a drift gate like the one above. */
@@ -280,15 +283,22 @@ const ANTHROPIC_COMPAT_GATE = {
   allowEmptySignature: 'offer',
   supportsStrictTools: 'offer',
   sendSessionAffinityHeaders: 'withhold',
-  supportsToolReferences: 'withhold',
+  sessionAffinityFormat: 'withhold',
   supportsMidConvoEffort: 'withhold',
   allowedFallbackModels: 'withhold',
+  supportsMidConvoSystemMessages: 'withhold',
+  supportsMidConvoToolChanges: 'withhold',
 } as const satisfies Record<keyof AnthropicMessagesCompat, CompatDisposition>
 
 /** Disposition of every `BedrockCompat` field; a drift gate like the one above. */
 const BEDROCK_COMPAT_GATE = {
   supportsStrictMode: 'offer',
 } as const satisfies Record<keyof BedrockCompat, CompatDisposition>
+
+/** Disposition of every `MistralConversationsCompat` field; a drift gate like the one above. */
+const MISTRAL_COMPAT_GATE = {
+  supportsMidConvoSystemMessages: 'withhold',
+} as const satisfies Record<keyof MistralConversationsCompat, CompatDisposition>
 
 /**
  * Every wire protocol pi-ai gives a compat type. Derived from `Model.compat`'s
@@ -315,6 +325,7 @@ const COMPAT_GATES: Readonly<Record<ApiWithCompat, Readonly<Record<string, Compa
   'openai-codex-responses': RESPONSES_COMPAT_GATE,
   'anthropic-messages': ANTHROPIC_COMPAT_GATE,
   'bedrock-converse-stream': BEDROCK_COMPAT_GATE,
+  'mistral-conversations': MISTRAL_COMPAT_GATE,
 }
 
 /**
@@ -576,6 +587,19 @@ export interface PiAiModelProfile {
   id: string
   /** Display name for selectors; defaults to the catalog name, then the id. */
   name?: string
+  /**
+   * Wire protocol this model speaks. Omission keeps the route's `api`, then the
+   * installed catalog entry's own protocol. Naming one is what lets a model the
+   * catalog does not describe join a route whose models disagree about theirs —
+   * a provider adding a model under a protocol its siblings do not all share.
+   */
+  api?: string
+  /**
+   * Endpoint serving this model. Omission keeps the route's `baseURL`, then the
+   * installed catalog entry's endpoint. A model the catalog does not describe
+   * on a route with no endpoint of its own must name one.
+   */
+  baseURL?: string
   /** Maximum combined request and response context in tokens. */
   contextWindow?: number
   /**
@@ -885,14 +909,26 @@ export function resolveRouteModels(
     if (seen.has(entry.id)) invalid(provider, `lists model "${entry.id}" more than once`)
     seen.add(entry.id)
     const base = defaults.get(entry.id)
-    const api = request.api ?? base?.api ?? routeApi
+    if (entry.api !== undefined && entry.api.length === 0) {
+      invalid(provider, `model "${entry.id}" has an empty api`)
+    }
+    if (entry.baseURL !== undefined && entry.baseURL.length === 0) {
+      invalid(provider, `model "${entry.id}" has an empty baseURL`)
+    }
+    // The entry's own protocol and endpoint win over the route's: a route-level
+    // value is a default for the models that state neither, so declaring one on
+    // a single model is how a catalog route whose models disagree about
+    // protocols — or a gateway serving families at different endpoints — gains a
+    // model without being split into one route per protocol.
+    const api = entry.api ?? request.api ?? base?.api ?? routeApi
     if (api === undefined) {
       invalid(provider, `model "${entry.id}" needs an api; the installed catalog does not describe it, so set the`
-        + ' route\'s api to the wire protocol its endpoint speaks')
+        + ' model\'s api to the wire protocol its endpoint speaks, or the route\'s api when every model shares one')
     }
-    const baseUrl = request.baseURL ?? base?.baseUrl ?? providerBaseUrl
+    const baseUrl = entry.baseURL ?? request.baseURL ?? base?.baseUrl ?? providerBaseUrl
     if (baseUrl === undefined) {
-      invalid(provider, `model "${entry.id}" needs a baseURL; the installed catalog does not describe this route`)
+      invalid(provider, `model "${entry.id}" needs a baseURL; the installed catalog does not describe it, so set the`
+        + ' model\'s baseURL to its endpoint, or the route\'s baseURL when every model shares one')
     }
     // Capacities fall back to the route's own defaults, so a model listing that
     // discloses nothing but ids still yields a serviceable route. The fallback

@@ -73,6 +73,41 @@ async function harness(): Promise<Context> {
   return ctx
 }
 
+/**
+ * A `fetch` double answering the given replies in order, recording every URL
+ * and init it was asked with. The last reply repeats when more requests arrive
+ * than the caller scripted. `afterEach` unstubs it.
+ */
+function stubListings(
+  replies: readonly { status?: number; body?: string }[],
+): { url: string; init: RequestInit | undefined }[] {
+  const asked: { url: string; init: RequestInit | undefined }[] = []
+  let at = 0
+  vi.stubGlobal('fetch', async (url: string | URL, init?: RequestInit) => {
+    asked.push({ url: String(url), init })
+    const reply = replies[Math.min(at, replies.length - 1)]
+    at += 1
+    return new Response(reply?.body ?? '{"data":[]}', {
+      status: reply?.status ?? 200,
+      headers: { 'content-type': 'application/json' },
+    })
+  })
+  return asked
+}
+
+/** The discovery row the installed catalog answers for one model id. */
+function catalogRow(id: string): Record<string, unknown> {
+  const model = getBuiltinModels('opencode-go').find(candidate => candidate.id === id)
+  if (model === undefined) throw new Error(`the installed catalog ships no opencode-go model "${id}"`)
+  return {
+    id: model.id,
+    name: model.name,
+    contextWindow: model.contextWindow,
+    maxTokens: model.maxTokens,
+    inputModalities: [...model.input],
+  }
+}
+
 describe('catalog-route model discovery', () => {
   it('includes the installed model input types for vision models', async () => {
     const ctx = await harness()
@@ -99,6 +134,69 @@ describe('catalog-route model discovery', () => {
   it('needs no endpoint for a route the catalog describes', async () => {
     const ctx = await harness()
     await expect(ctx.llm.discoverModels('llm-pi-ai', { provider: 'deepseek' })).resolves.not.toHaveLength(0)
+  })
+
+  it('interrogates the route\'s principal endpoint for a live answer, merging what it lists', async () => {
+    const listed = ['deepseek-v4-pro', 'deepseek-flash', 'unlisted-anywhere']
+    // The repeat pins the merge's duplicate handling: an endpoint may list an
+    // id twice, and the first row is the one that stays.
+    const rows = [...listed.map(id => ({ id })), { id: 'unlisted-anywhere' }]
+    const asked = stubListings([{ body: JSON.stringify({ data: rows }) }])
+    process.env['PI_LIVE_KEY'] = 'live-key'
+    touchedEnv.push('PI_LIVE_KEY')
+    const ctx = new Context()
+    await ctx.plugin(LlmRuntime)
+    await ctx.plugin(LlmPiAi, { providers: { 'opencode-go': { apiKeyEnv: 'PI_LIVE_KEY' } } })
+
+    const models = await ctx.llm.discoverModels('llm-pi-ai', { provider: 'opencode-go', live: true })
+
+    // The endpoint most of the route's models use answers for the whole route,
+    // reached with the credential the route's profile names.
+    expect(asked.map(entry => entry.url)).toEqual(['https://opencode.ai/zen/go/v1/models'])
+    expect(new Headers(asked[0]?.init?.headers).get('authorization')).toBe('Bearer live-key')
+    // The listing decides the ids and their order; a catalog id keeps the
+    // installed metadata, a live-only id joins as the endpoint reports it, and
+    // a catalog model the listing omitted stays behind them.
+    const catalogIds = getBuiltinModels('opencode-go').map(model => model.id)
+    expect(models.map(model => model.id))
+      .toEqual([...listed, ...catalogIds.filter(id => !listed.includes(id))])
+    expect(models.find(model => model.id === 'deepseek-v4-pro')).toEqual(catalogRow('deepseek-v4-pro'))
+    expect(models.find(model => model.id === 'deepseek-flash')).toEqual({ id: 'deepseek-flash', name: 'deepseek-flash' })
+  })
+
+  it('asks the endpoint the draft names instead of the route\'s own', async () => {
+    const server = await listingServer({ body: JSON.stringify({ data: [{ id: 'deepseek-v4-pro' }, { id: 'gateway-only' }] }) })
+    const ctx = await harness()
+
+    const models = await ctx.llm.discoverModels('llm-pi-ai', {
+      provider: 'opencode-go',
+      baseURL: server.url,
+      live: true,
+    })
+
+    expect(server.paths).toEqual(['/models'])
+    expect(models[0]).toEqual(catalogRow('deepseek-v4-pro'))
+    expect(models[1]).toEqual({ id: 'gateway-only', name: 'gateway-only' })
+  })
+
+  it('asks the next endpoint when the principal one fails, and reports the first failure when none answers', async () => {
+    const ctx = await harness()
+    const asked = stubListings([
+      { status: 500 },
+      { body: JSON.stringify({ data: [{ id: 'from-the-secondary-endpoint' }] }) },
+    ])
+
+    const models = await ctx.llm.discoverModels('llm-pi-ai', { provider: 'opencode-go', live: true })
+
+    expect(asked.map(entry => entry.url)).toEqual([
+      'https://opencode.ai/zen/go/v1/models',
+      'https://opencode.ai/zen/go/v1/models?limit=1000',
+    ])
+    expect(models[0]).toEqual({ id: 'from-the-secondary-endpoint', name: 'from-the-secondary-endpoint' })
+
+    stubListings([{ status: 500 }, { status: 404 }])
+    await expect(ctx.llm.discoverModels('llm-pi-ai', { provider: 'opencode-go', live: true }))
+      .rejects.toThrow(/opencode\.ai\/zen\/go\/v1\/models answered 500/)
   })
 
   it('says where a route the catalog does not describe must get its models', async () => {

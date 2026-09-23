@@ -1,5 +1,5 @@
 ---
-description: "Ready-made dsh profile bundles for the shared core, browser GUI, one-shot task, ACP, and SDK application surfaces."
+description: "Ready-made dsh profile bundles for the shared core, browser GUI, one-shot task, ACP, SDK, and optional external capabilities."
 kind: "package-group"
 ---
 
@@ -26,6 +26,7 @@ This group maps the installable patch layers used by `dsh --profile`. Each packa
 | [`acp-app`](acp-app/README.md) | Automation-only ACP stdio application over base | mounts the ACP bridge |
 | [`web-app`](web-app/README.md) | Browser application layer over base | mounts Web rows |
 | [`headless`](headless/README.md) | One-shot command-line task application over base | `headless-runner` |
+| [`open-design`](open-design/README.md) | Optional OpenDesign MCP tools for profile agents | `mcp-open-design` |
 | [`sdk-app`](sdk-app/README.md) | SDK JSON-RPC stdio application over base | mounts the SDK server |
 | [`sdk-minimal`](sdk-minimal/README.md) | Standalone minimal SDK application without base or Web | — (complete patch tree) |
 

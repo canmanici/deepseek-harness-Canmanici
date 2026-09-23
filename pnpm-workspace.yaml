@@ -18,6 +18,30 @@ overrides:
   'extract-zip>yauzl': '3.4.0'
   '@deepseek-ai/cosmokit': 'link:vendor/cosmokit'
   '@deepseek-ai/schemastery': 'link:vendor/schemastery'
+  # Security pins: each range admits its advisory's fixed version, so the
+  # override carries the minimum patched release.
+  # js-yaml merge-key/!!omap quadratic CPU (CLI, config-editor runtime deps).
+  'js-yaml@>=4.0.0 <4.3.2': '4.3.2'
+  # fast-uri authority parsing: host confusion and SSRF (ajv at boot).
+  'fast-uri@>=3.0.0 <3.1.6': '3.1.6'
+  # fflate ZIP64 central-directory infinite loop; libreoffice-kit pins 0.8.2 exactly.
+  'fflate@<0.8.3': '0.8.3'
+  # undici 7.x cache, retry-desync and CRLF advisories (@electron/get, pkg-fetch, jsdom).
+  'undici@>=7.0.0 <7.29.0': '7.29.0'
+  # ip-address special-use classification bypass (@modelcontextprotocol/sdk server dep).
+  'ip-address@<10.3.1': '10.3.1'
+  # nanoid infinite loop with zero-size custom generators.
+  'nanoid@<3.3.18': '3.3.18'
+  # postcss sourceMappingURL traversal on auto-load.
+  'postcss@<8.5.23': '8.5.23'
+  # protobufjs .proto option parsing denial of service.
+  'protobufjs@<7.6.5': '7.6.5'
+  # qs array-limit bypass and isBuffer denial of service (desktop packager SDK).
+  'qs@<6.16.0': '6.16.0'
+  # hono CORS ReDoS, memo cross-request retention, toSSG writes, parseBody nesting.
+  'hono@<4.13.5': '4.13.5'
+  # @hono/node-server serve-static path traversal on Windows.
+  '@hono/node-server@<1.19.15': '1.19.15'
 
 peerDependencyRules:
   allowedVersions:
@@ -61,8 +85,8 @@ minimumReleaseAgeExclude:
   - '@deepseek-ai/libreoffice-kit-wasm@0.0.1'
   # Fresh pi-ai releases carry the model catalog updates that are the whole
   # point of bumping it; waiting out the release age would defeat that.
-  - '@earendil-works/pi-ai@0.85.1'
-  - '@earendil-works/pi-telemetry@0.85.1'
+  - '@earendil-works/pi-ai@0.87.1'
+  - '@earendil-works/pi-telemetry@0.87.1'
   - node-addon-native-custom-loader@0.1.6
   - node-addon-require-builtin-darwin-arm64@0.1.6
   - node-addon-require-builtin-darwin-x64@0.1.6
@@ -95,7 +119,7 @@ minimumReleaseAgeExclude:
   - '@trycua/cua-driver-win32-x64-msvc@0.28.0'
   - '@trycua/cua-driver@0.28.0'
 patchedDependencies:
-  '@earendil-works/pi-ai@0.85.1': patches/@earendil-works__pi-ai@0.85.1.patch
+  '@earendil-works/pi-ai@0.87.1': patches/@earendil-works__pi-ai@0.87.1.patch
   '@electron/osx-sign@1.3.3': patches/@electron__osx-sign@1.3.3.patch
   '@fortune-sheet/core@1.0.4': patches/@fortune-sheet__core@1.0.4.patch
   '@fortune-sheet/react@1.0.4': patches/@fortune-sheet__react@1.0.4.patch

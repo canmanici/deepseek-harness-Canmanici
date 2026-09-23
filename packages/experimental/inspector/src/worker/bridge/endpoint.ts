@@ -96,6 +96,11 @@ export class InspectorEndpoint {
   }
 
   private handleHttp(request: IncomingMessage, response: import('node:http').ServerResponse): void {
+    if (!this.loopbackHost(request)) {
+      response.writeHead(403, { 'content-type': 'text/plain; charset=utf-8' })
+      response.end('forbidden')
+      return
+    }
     const pathname = new URL(request.url ?? '/', 'http://inspector.invalid').pathname
     if (pathname === '/json' || pathname === '/json/list') {
       this.json(response, [this.target()])
@@ -114,6 +119,10 @@ export class InspectorEndpoint {
   }
 
   private handleUpgrade(request: IncomingMessage, socket: Duplex, head: Buffer): void {
+    if (!this.loopbackHost(request)) {
+      socket.destroy()
+      return
+    }
     let pathname: string
     try {
       pathname = new URL(request.url ?? '/', 'http://inspector.invalid').pathname
@@ -202,6 +211,30 @@ export class InspectorEndpoint {
     socket.on('error', () => {
       // The close event performs connection-owned cleanup.
     })
+  }
+
+  /**
+   * A request is admitted only when its Host header names the configured bind
+   * host or a loopback name: a DNS-rebinding page reaches 127.0.0.1 while
+   * presenting the attacker's own hostname, and the CDP page endpoint carries
+   * no token a page could not otherwise learn.
+   * @param request - HTTP or upgrade request.
+   * @returns whether the request's Host header is a loopback authority.
+   */
+  private loopbackHost(request: IncomingMessage): boolean {
+    const header = request.headers.host
+    if (header === undefined) return false
+    let hostname: string
+    try {
+      hostname = new URL(`http://${header}`).hostname
+    } catch {
+      return false
+    }
+    return hostname === this.config.host
+      || hostname === 'localhost'
+      || hostname === '127.0.0.1'
+      || hostname === '[::1]'
+      || hostname === '::1'
   }
 
   private authorizedClient(request: IncomingMessage): boolean {

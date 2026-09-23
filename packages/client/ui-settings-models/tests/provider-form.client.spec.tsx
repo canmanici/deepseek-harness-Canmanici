@@ -569,11 +569,12 @@ describe('endpoint interrogation', () => {
     await waitFor(() => { expect(discover).toHaveBeenCalled() })
     expect(lastProbe(discover)).toEqual({
       settingsNs: 'llm-pi-ai',
-      // The route is named, so an adapter that already describes it answers
-      // from its own registry rather than the endpoint.
+      // The route is named, and the button asks for a live answer: an adapter
+      // that already describes the route interrogates its endpoint too.
       provider: 'openai',
       baseURL: 'https://edited.example/v1',
       apiKey: 'typed-not-saved',
+      live: true,
     })
   })
 
@@ -593,6 +594,7 @@ describe('endpoint interrogation', () => {
       provider: 'openai',
       baseURL: 'https://proxy.example/v1',
       api: 'openai-responses',
+      live: true,
     })
   })
 
@@ -663,7 +665,7 @@ describe('endpoint interrogation', () => {
     fireEvent.click(screen.getByText(en.fetchModels))
 
     await waitFor(() => { expect(discover).toHaveBeenCalled() })
-    expect(lastProbe(discover)).toEqual({ settingsNs: 'llm-pi-ai', provider: 'openai' })
+    expect(lastProbe(discover)).toEqual({ settingsNs: 'llm-pi-ai', provider: 'openai', live: true })
   })
 
   it('keeps the create card asking only once it has an endpoint', () => {
@@ -688,6 +690,7 @@ describe('endpoint interrogation', () => {
       settingsNs: 'llm-pi-ai',
       baseURL: 'https://acme.test/v1',
       api: 'openai-completions',
+      live: true,
     })
   })
 
@@ -703,6 +706,32 @@ describe('endpoint interrogation', () => {
     expect(screen.getByLabelText(`${en.contextWindow} 1`)).toBeTruthy()
     expandModel(1)
     expect(screen.queryByLabelText(`${en.contextWindow} 1`)).toBeNull()
+  })
+
+  it('lets a row name its own protocol and endpoint, and clear them back', async () => {
+    const { mutate } = await mountSection({
+      providers: {
+        'acme-gateway': {
+          api: 'openai-completions',
+          baseURL: 'https://gateway.acme.example/v1',
+          models: [{ id: 'custom', api: 'anthropic-messages', baseURL: 'https://gateway.acme.example/anthropic' }],
+        },
+      },
+      declaredRoutes: ['acme-gateway'],
+    })
+    openEditor('acme-gateway')
+    expandModel(1)
+
+    // The row shows what it declares, and its controls edit the stored row.
+    expect(screen.getByLabelText<HTMLSelectElement>(`${en.customApi} 1`).value).toBe('anthropic-messages')
+    expect(screen.getByLabelText<HTMLInputElement>(`${en.baseUrl} 1`).value).toBe('https://gateway.acme.example/anthropic')
+    fireEvent.change(screen.getByLabelText(`${en.customApi} 1`), { target: { value: 'openai-responses' } })
+    // An emptied endpoint leaves the profile instead of being stored blank.
+    fireEvent.change(screen.getByLabelText(`${en.baseUrl} 1`), { target: { value: '' } })
+    fireEvent.click(screen.getByText(en.apply))
+
+    await waitFor(() => { expect(mutate).toHaveBeenCalled() })
+    expect(firstMutate(mutate).ops[0]?.value).toEqual([{ id: 'custom', api: 'openai-responses' }])
   })
 
   it('closes the picker without adopting anything on cancel', async () => {

@@ -25,7 +25,8 @@
       - group:
         - text: 自定义设置 API 地址
         - textbox "API 地址":
-          - /placeholder: 提供商默认
+          - /placeholder: {{listingOrigin}}
+          - text: {{listingOrigin}}
         - region "模型目录":
           - text: 模型目录 已自定义模型目录
           - button "恢复默认模型"
@@ -38,6 +39,15 @@
             - text: GPT-6 Astra
           - button "模型选项 1" [expanded]
           - button "删除模型 1"
+          - text: API 协议
+          - combobox "API 协议 1":
+            - option "未选择" [selected]
+            - option "OpenAI Chat Completions"
+            - option "OpenAI Responses"
+            - option "Anthropic Messages"
+          - text: API 地址
+          - textbox "API 地址 1":
+            - /placeholder: 提供商默认
           - text: 上下文窗口
           - textbox "上下文窗口 1":
             - /placeholder: 256K

@@ -1545,12 +1545,17 @@ export interface PiAiProviderProfile {
   /** Name shown by configuration surfaces; defaults to the route key. */
   displayName?: string
   /**
-   * Wire protocol every model on this route speaks. Omission keeps each
-   * installed catalog model's own protocol, which is why a catalog route needs
-   * no protocol at all; a route the catalog does not ship must name one.
+   * Wire protocol this route's models speak unless a model entry names its own.
+   * Omission keeps each installed catalog model's own protocol, which is why a
+   * catalog route needs no protocol at all; a route the catalog does not ship
+   * must name one unless every model entry does.
    */
   api?: string
-  /** Endpoint for this route's models; defaults to the installed catalog's endpoint. */
+  /**
+   * Endpoint this route's models use unless a model entry names its own;
+   * defaults to the installed catalog's endpoint. A route the catalog does not
+   * ship must name one unless every model entry does.
+   */
   baseURL?: string
   /**
    * This route's model catalog. Omission serves the installed catalog for the
@@ -1600,6 +1605,16 @@ export interface PiAiProviderProfile {
   defaultInput?: PiAiModality[]
   /** Provider request headers, validated against Fetch when the profile resolves; Harness attribution wins reserved names. */
   headers?: Record<string, string>
+  /**
+   * Header name that carries this route's conversation id on every model
+   * request — OpenCode Go requires `x-opencode-session`. The value is the
+   * request's session id, so a gateway routing by conversation sees one stable
+   * id across that conversation's turns, resumes, compactions, and retries,
+   * and a fresh id for a new conversation or fork. It replaces a same-named
+   * `headers` entry, because a fixed value cannot do a per-conversation id's
+   * job; the static entry still covers a request that names no session id.
+   */
+  sessionHeader?: string
   /** Provider-neutral pi-ai reasoning level. */
   reasoning?: ModelThinkingLevel
   /** Token budgets used by reasoning providers that support them. */
@@ -1638,6 +1653,19 @@ export interface PiAiModelProfile {
   id: string
   /** Display name for selectors; defaults to the catalog name, then the id. */
   name?: string
+  /**
+   * Wire protocol this model speaks. Omission keeps the route's `api`, then the
+   * installed catalog entry's own protocol. Naming one is what lets a model the
+   * catalog does not describe join a route whose models disagree about theirs —
+   * a provider adding a model under a protocol its siblings do not all share.
+   */
+  api?: string
+  /**
+   * Endpoint serving this model. Omission keeps the route's `baseURL`, then the
+   * installed catalog entry's endpoint. A model the catalog does not describe
+   * on a route with no endpoint of its own must name one.
+   */
+  baseURL?: string
   /** Maximum combined request and response context in tokens. */
   contextWindow?: number
   /**
@@ -1794,7 +1822,7 @@ export type PiAiThinkingTokenBudgetField = NonNullable<OpenAICompletionsCompat['
 
 Depends on: `Api` (`@earendil-works/pi-ai`) · `CacheRetention` (`@earendil-works/pi-ai`) · `Model` (`@earendil-works/pi-ai`) · `ModelThinkingLevel` (`@earendil-works/pi-ai`) · `OpenAICompletionsCompat` (`@earendil-works/pi-ai`) · [`RetryPolicyConfig`](../packages/llm/llm/src/index.ts) · `ThinkingBudgets` (`@earendil-works/pi-ai`) · `Transport` (`@earendil-works/pi-ai`) · `Volatile` (`@deepseek-ai/cordis`)
 
-Source: [`packages/llm/llm-pi-ai/src/config.ts:222`](../packages/llm/llm-pi-ai/src/config.ts)
+Source: [`packages/llm/llm-pi-ai/src/config.ts:237`](../packages/llm/llm-pi-ai/src/config.ts)
 
 <a id="deepseek-aidsh-llm-replay"></a>
 
@@ -2745,7 +2773,7 @@ export interface Config {
 }
 ```
 
-Source: [`packages/skill/skill-filesystem/src/index.ts:49`](../packages/skill/skill-filesystem/src/index.ts)
+Source: [`packages/skill/skill-filesystem/src/index.ts:50`](../packages/skill/skill-filesystem/src/index.ts)
 
 <a id="deepseek-aidsh-skill-office"></a>
 

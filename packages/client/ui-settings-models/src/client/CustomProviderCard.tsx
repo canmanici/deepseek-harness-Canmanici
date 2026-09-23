@@ -288,6 +288,7 @@ export function CustomProviderCard(props: CustomProviderCardProps): ReactNode {
       <ModelListEditor
         models={models}
         onChange={setModels}
+        protocolChoices={protocols}
         probe={{
           settingsNs: NS,
           baseURL: normalizedBaseURL,

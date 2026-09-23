@@ -16,6 +16,7 @@
 // settings unsets reach the wire.
 import { assertModelInputLayout } from './model-input-layout.ts'
 import { readFile } from 'node:fs/promises'
+import { createServer, type Server } from 'node:http'
 import { fileURLToPath } from 'node:url'
 import { join } from 'node:path'
 import type { Browser, Page } from 'playwright'
@@ -37,11 +38,40 @@ const NATIVE_DELETE_EXPECTED = join(SNAPSHOT_DIR, 'native-delete.expected.md')
 const DELETE_EXPECTED = join(SNAPSHOT_DIR, 'delete.expected.md')
 const MODE = webSnapshotMode()
 
+/** Origins this scenario started; closed with the scaffold. */
+const listingOrigins: Server[] = []
+
+/** One local model-listing origin: its base URL and the paths asked of it. */
+interface ListingOrigin {
+  url: string
+  paths: string[]
+}
+
+/** A local model-listing origin whose `/models` answers the scripted body. */
+async function startListingOrigin(body: string): Promise<ListingOrigin> {
+  const paths: string[] = []
+  const server = createServer((request, response) => {
+    paths.push(request.url ?? '')
+    response.writeHead(200, { 'content-type': 'application/json', 'content-length': String(Buffer.byteLength(body)) })
+    response.end(body)
+  })
+  listingOrigins.push(server)
+  await new Promise<void>((resolve, reject) => {
+    server.once('error', reject)
+    server.listen(0, '127.0.0.1', resolve)
+  })
+  const address = server.address()
+  if (address === null || typeof address === 'string') throw new Error('listing origin did not expose an IP socket')
+  return { url: `http://127.0.0.1:${String(address.port)}`, paths }
+}
+
 describe('web e2e: Models settings page configures a dormant provider', () => {
   let scaffold: WebScaffold
   let browser: Browser
   let page: Page
   let tripwire: ReturnType<typeof watchConsole>
+  /** The origin the stored minimax-cn route points at, started with its baseURL. */
+  let listingOrigin: ListingOrigin
 
   beforeAll(async () => {
     scaffold = await launchWebScaffold({})
@@ -56,6 +86,7 @@ describe('web e2e: Models settings page configures a dormant provider', () => {
   afterAll(async () => {
     await browser?.close()
     await scaffold?.close()
+    await Promise.all(listingOrigins.splice(0).map(server => new Promise(resolve => server.close(resolve))))
   })
 
   it('rejects layout checks without an explicit viewport before resizing the page', async () => {
@@ -181,16 +212,19 @@ describe('web e2e: Models settings page configures a dormant provider', () => {
     const dialog = page.getByRole('dialog', { name: '设置' })
     await dialog.getByRole('button', { name: '编辑 minimax-cn' }).click()
     await dialog.getByText('自定义设置').click()
-    const url = dialog.getByLabel('API 地址')
+    const url = dialog.getByLabel('API 地址', { exact: true })
     await url.waitFor({ timeout: 10_000 })
-    await url.fill('https://gateway.minimax.example/v1')
+    // A fetch asks the endpoint even for a catalog route, so the route points
+    // at a local listing origin the next scenario interrogates.
+    listingOrigin = await startListingOrigin('{"data":[]}')
+    await url.fill(listingOrigin.url)
     await dialog.getByRole('button', { name: '保存', exact: true }).click()
     // The editor closes back to the row; the fold's write merged into the
     // stored profile beside the reference.
     await expect.poll(async () => dialog.getByLabel('API 地址').count(), { timeout: 10_000 }).toBe(0)
     await dialog.getByText('已保存 minimax-cn。', { exact: true }).waitFor({ timeout: 10_000 })
     const document = await readFile(join(scaffold.harnessHome, 'profiles', 'scaffold', 'cordis.patch.yml'), 'utf8')
-    expect(document).toContain('baseURL: https://gateway.minimax.example/v1')
+    expect(document).toContain(`baseURL: ${listingOrigin.url}`)
     expect(document).toContain('apiKeyEnv: MINIMAX_CN_API_KEY')
     const snapshot = await captureStableAria(page, '[role="dialog"]', scaffold.workspaceCwd)
     await compareOrRefreshGolden(CONFIGURED_EXPECTED, snapshot, MODE)
@@ -206,6 +240,10 @@ describe('web e2e: Models settings page configures a dormant provider', () => {
 
     const picker = page.getByRole('dialog', { name: '选择要添加的模型' })
     await picker.waitFor({ timeout: 10_000 })
+    // The route is one the installed catalog ships, and the fetch asked its
+    // endpoint anyway: the origin's empty listing leaves the catalog as the
+    // merged answer.
+    expect(listingOrigin.paths).toEqual(['/models'])
     const boxes = picker.getByRole('checkbox')
     const count = await boxes.count()
     expect(count).toBeGreaterThan(0)
@@ -295,7 +333,7 @@ describe('web e2e: Models settings page configures a dormant provider', () => {
     // The create card asked this route for a name and a protocol because
     // nothing can default them; the editor reaches the same two fields rather
     // than sending the user to cordis.patch.yml for what only this route names.
-    const protocol = dialog.getByLabel('API 协议')
+    const protocol = dialog.getByLabel('API 协议', { exact: true })
     await protocol.waitFor({ timeout: 10_000 })
     expect(await protocol.inputValue()).toBe('openai-completions')
     const name = dialog.getByLabel('显示名称', { exact: true })
@@ -310,7 +348,7 @@ describe('web e2e: Models settings page configures a dormant provider', () => {
     await name.fill('Acme 网关')
     await dialog.getByRole('group', { name: '输入类型 1' }).getByRole('checkbox', { name: '图片' }).uncheck()
     await dialog.getByRole('button', { name: '保存', exact: true }).click()
-    await expect.poll(async () => dialog.getByLabel('API 协议').count(), { timeout: 10_000 }).toBe(0)
+    await expect.poll(async () => dialog.getByLabel('API 协议', { exact: true }).count(), { timeout: 10_000 }).toBe(0)
     // The adapter re-resolved the route under the new protocol and re-registered
     // it under the new name: an unserviceable profile would have been refused
     // at the write instead, and a rename that did not re-register would leave
@@ -357,9 +395,16 @@ describe('web e2e: Models settings page configures a dormant provider', () => {
 
   it('inherits installed vision input and retains it when adopting a discovered model', async () => {
     onTestFailed(() => saveFailureShot(page, 'web-e2e-models-catalog-inputs'))
+    // The fetch asks the endpoint even for a catalog route, so the route points
+    // at a local origin; its empty listing leaves the installed catalog as the
+    // merged answer.
+    const origin = await startListingOrigin('{"data":[]}')
     await scaffold.ctx.settings.mutate('llm-pi-ai', [{
       op: 'set', path: ['providers', 'openai'],
-      value: { models: [{ id: 'gpt-6-astra', name: 'GPT-6 Astra', contextWindow: 272000, maxTokens: 128000 }] },
+      value: {
+        baseURL: origin.url,
+        models: [{ id: 'gpt-6-astra', name: 'GPT-6 Astra', contextWindow: 272000, maxTokens: 128000 }],
+      },
     }])
     const dialog = page.getByRole('dialog', { name: '设置' })
     const edit = dialog.getByRole('button', { name: '编辑 openai', exact: true })
@@ -373,7 +418,9 @@ describe('web e2e: Models settings page configures a dormant provider', () => {
       expect(await types.getByRole('checkbox', { name: '文本', exact: true }).isChecked()).toBe(true)
       const before = await readFile(join(scaffold.harnessHome, 'profiles', 'scaffold', 'cordis.patch.yml'), 'utf8')
       await compareOrRefreshGolden(join(SNAPSHOT_DIR, 'catalog-inputs.expected.md'),
-        await captureStableAria(page, '[role="dialog"]', scaffold.workspaceCwd), MODE)
+        await captureStableAria(page, '[role="dialog"]', scaffold.workspaceCwd, {
+          replacements: [[origin.url, '{{listingOrigin}}']],
+        }), MODE)
       await dialog.getByRole('button', { name: '保存', exact: true }).click()
       await types.waitFor({ state: 'detached' })
       expect(await readFile(join(scaffold.harnessHome, 'profiles', 'scaffold', 'cordis.patch.yml'), 'utf8')).toBe(before)
@@ -395,6 +442,8 @@ describe('web e2e: Models settings page configures a dormant provider', () => {
       await dialog.getByRole('button', { name: '删除模型 1' }).click()
       await dialog.getByRole('button', { name: '获取可用模型' }).click()
       const picker = page.getByRole('dialog', { name: '选择要添加的模型' })
+      await picker.waitFor({ timeout: 10_000 })
+      expect(origin.paths).toEqual(['/models'])
       await picker.getByRole('button', { name: '取消全选' }).click()
       await picker.getByRole('searchbox', { name: '搜索模型' }).fill('gpt-6-astra')
       await picker.getByRole('checkbox', { name: 'GPT-6 Astra', exact: true }).check()

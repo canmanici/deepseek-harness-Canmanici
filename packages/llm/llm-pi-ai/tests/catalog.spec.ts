@@ -9,6 +9,7 @@ import { PiAiAdapter } from '@deepseek-ai/dsh-llm-pi-ai'
 import type { ContextFormed } from '@deepseek-ai/dsh-llm'
 import { getBuiltinModels } from '@earendil-works/pi-ai/providers/all'
 import { AssistantMessageEventStream } from '@earendil-works/pi-ai/utils/event-stream'
+import { normalizeContext } from '@earendil-works/pi-ai/utils/transcript'
 import type { Api, Model, OpenAICompletionsCompat, Provider } from '@earendil-works/pi-ai'
 import { resolveProfiles } from '../src/config.ts'
 import { createModels, createProvider, getSupportedThinkingLevels } from '../src/models.ts'
@@ -316,12 +317,37 @@ describe('hand-declared providers', () => {
     })).toThrow(/needs a baseURL/)
   })
 
+  it('lets a model entry supply the protocol and endpoint the route does not', () => {
+    // A route whose models each describe themselves needs neither at the route
+    // level; the resolution reads the entry first and the route second.
+    const models = resolveProfiles({
+      'acme-gateway': {
+        models: [{ id: 'm', api: 'openai-completions', baseURL: 'https://acme.test/v1', contextWindow: 1, maxTokens: 1 }],
+      },
+    }).get('acme-gateway')?.piProvider?.getModels() ?? []
+
+    expect(models).toHaveLength(1)
+    expect(models[0]).toMatchObject({ api: 'openai-completions', baseUrl: 'https://acme.test/v1' })
+  })
+
+  it('rejects an empty protocol or endpoint on a model entry', () => {
+    // The schema refuses both when a card writes them; resolution is the
+    // boundary for a profile that reaches it from composition instead.
+    expect(() => resolveProfiles({
+      'acme-gateway': { api: 'openai-completions', baseURL: 'https://acme.test', models: [{ id: 'm', api: '' }] },
+    })).toThrow(/model "m" has an empty api/)
+    expect(() => resolveProfiles({
+      'acme-gateway': { api: 'openai-completions', baseURL: 'https://acme.test', models: [{ id: 'm', baseURL: '' }] },
+    })).toThrow(/model "m" has an empty baseURL/)
+  })
+
   it('retains the missing-api model diagnostic when a stored custom provider cannot be built', () => {
     const profile = resolveProfiles({
       'acme-gateway': { baseURL: 'https://acme.test', models: [{ id: '111' }] },
     }, 'deferred').get('acme-gateway')!
     const failure = 'llm-pi-ai: provider "acme-gateway" model "111" needs an api; '
-      + 'the installed catalog does not describe it, so set the route\'s api to the wire protocol its endpoint speaks'
+      + 'the installed catalog does not describe it, so set the model\'s api to the wire protocol its endpoint'
+      + ' speaks, or the route\'s api when every model shares one'
 
     expect(profile.catalogError).toBe(failure)
     expect(profile.modelErrors.get('111')).toBe(failure)
@@ -345,7 +371,47 @@ describe('hand-declared providers', () => {
     const spec = { provider: 'acme-gateway', displayName: 'Acme Gateway', models: [], namesCredential: true }
     expect(() => buildProvider({ ...spec, api: 'quantum-telepathy' }))
       .toThrow(/cannot serve; supported protocols are/)
-    expect(() => buildProvider(spec)).toThrow(/cannot serve; supported protocols are/)
+    expect(() => buildProvider(spec)).toThrow(/names no wire protocol and serves no model/)
+  })
+
+  it('refuses a model naming a protocol this build cannot serve', () => {
+    expect(() => resolveProfiles({
+      'acme-gateway': {
+        api: 'openai-completions',
+        baseURL: 'https://acme.test',
+        models: [{ id: 'm', api: 'quantum-telepathy', contextWindow: 1, maxTokens: 1 }],
+      },
+    })).toThrow(/model "m" names api "quantum-telepathy", which this build cannot serve/)
+  })
+
+  it('dispatches each model through the protocol that model names', async () => {
+    // The second reply is not a readable Anthropic stream: this asserts which
+    // wire format each request took, not how the reply was parsed.
+    const server = await mockServer([{ events: textEvents }, { status: 500, body: '{"error":"anthropic-shaped request"}' }])
+    const ctx = await harness({
+      providers: {
+        'acme-gateway': {
+          apiKeyEnv: KEY_ENV,
+          api: 'openai-completions',
+          baseURL: `${server.url}/v1`,
+          models: [
+            { id: 'acme-chat', contextWindow: 128_000, maxTokens: 4096 },
+            { id: 'acme-claude', api: 'anthropic-messages', baseURL: `${server.url}/anthropic`, contextWindow: 128_000, maxTokens: 4096 },
+          ],
+        },
+      },
+    })
+
+    // The route names one protocol and one model names another; each request
+    // reaches the wire format its own model carries.
+    expect((await assemble(ctx, { provider: 'acme-gateway', model: 'acme-chat', messages: [] })).finish)
+      .toEqual({ kind: 'stop' })
+    expect((await assemble(ctx, { provider: 'acme-gateway', model: 'acme-claude', messages: [] })).finish)
+      .toMatchObject({ kind: 'error' })
+    expect(server.paths).toEqual(['/v1/chat/completions', '/anthropic/v1/messages?beta=true'])
+    // Completions streams usage; Anthropic carries none of those fields.
+    expect(server.requests[0]).toHaveProperty('stream_options')
+    expect(server.requests[1]).not.toHaveProperty('stream_options')
   })
 
   it('delegates both stream methods from a static provider', () => {
@@ -360,14 +426,29 @@ describe('hand-declared providers', () => {
       name: 'Local',
       models: [model],
       auth: { apiKey: { name: 'Local', resolve: () => Promise.resolve({ auth: {}, source: 'Local' }) } },
-      api: { stream, streamSimple },
+      api: { [model.api]: { stream, streamSimple } },
     })
-    const context = { messages: [] }
+    const context = normalizeContext({ messages: [] })
 
     expect(provider.stream(model, context)).toBe(direct)
     expect(provider.streamSimple(model, context)).toBe(simple)
     expect(stream).toHaveBeenCalledOnce()
     expect(streamSimple).toHaveBeenCalledOnce()
+  })
+
+  it('fails a model whose protocol has no implementation rather than sending it through another', () => {
+    const [model] = getBuiltinModels('deepseek')
+    if (model === undefined) throw new Error('the installed catalog ships no deepseek model')
+    const provider = createProvider({
+      id: 'local',
+      name: 'Local',
+      models: [model],
+      auth: { apiKey: { name: 'Local', resolve: () => Promise.resolve({ auth: {}, source: 'Local' }) } },
+      api: {},
+    })
+
+    expect(() => provider.stream(model, normalizeContext({ messages: [] })))
+      .toThrow(`provider local has no API implementation for "${model.api}"`)
   })
 
   it('leaves an unauthenticated route to its protocol rather than inventing a credential', async () => {
@@ -508,6 +589,30 @@ describe('catalog routes with per-model configuration', () => {
     expect(server.paths).toEqual(['/v1/chat/completions'])
   })
 
+  it('lets a model the catalog does not describe join a mixed-protocol route', async () => {
+    const server = await mockServer([{ events: textEvents }])
+    const ctx = await harness({
+      providers: {
+        'opencode-go': {
+          apiKeyEnv: KEY_ENV,
+          models: [{
+            id: 'live-only-flash',
+            api: 'openai-completions',
+            baseURL: `${server.url}/v1`,
+            contextWindow: 1_000_000,
+            maxTokens: 131_072,
+          }],
+        },
+      },
+    })
+
+    // The route's installed models disagree about their protocols, so nothing
+    // route-level could describe this model: the entry does.
+    const result = await assemble(ctx, { provider: 'opencode-go', model: 'live-only-flash', messages: [] })
+    expect(result.finish).toEqual({ kind: 'stop' })
+    expect(server.paths).toEqual(['/v1/chat/completions'])
+  })
+
   it('fails an unconfigured model id before any provider request', async () => {
     const server = await mockServer([])
     const ctx = await harness({
@@ -545,7 +650,7 @@ describe('catalog routes with per-model configuration', () => {
     if (built === undefined) throw new Error('the deepseek route built no provider')
     const [model] = built.getModels()
     if (model === undefined) throw new Error('the deepseek route resolved no models')
-    const context = { messages: [{ role: 'user' as const, content: 'hi', timestamp: 0 }] }
+    const context = normalizeContext({ messages: [{ role: 'user', content: 'hi', timestamp: 0 }] })
 
     // `stream` is interface-required and unused by the harness adapter, which
     // only calls `streamSimple`; both must still reach the catalog provider.
@@ -1069,9 +1174,9 @@ describe('compat switches', () => {
   it('refuses a valueless compat key on a model entry too', () => {
     expect(() => resolveProfiles({
       deepseek: {
-        modelOverrides: { 'deepseek-v4-flash': { compat: { requiresReasoningContentOnAssistantMessages: null } } as never },
+        modelOverrides: { 'deepseek-flash': { compat: { requiresReasoningContentOnAssistantMessages: null } } as never },
       },
-    })).toThrow(/model "deepseek-v4-flash" sets compat "requiresReasoningContentOnAssistantMessages" with no value/)
+    })).toThrow(/model "deepseek-flash" sets compat "requiresReasoningContentOnAssistantMessages" with no value/)
   })
 
   it('serves the Responses compat type on every protocol pi-ai gives it to', () => {
@@ -1134,7 +1239,7 @@ describe('resolution snapshots', () => {
     const inFlight = (async () => {
       for await (const chunk of adapter.stream({
         provider: 'deepseek',
-        model: 'deepseek-v4-flash',
+        model: 'deepseek-flash',
         messages: [],
       })) chunks.push(chunk)
     })()
@@ -1163,7 +1268,7 @@ describe('resolution snapshots', () => {
     })
     const drain = async (): Promise<void> => {
       for await (const _chunk of adapter.stream({
-        provider: 'deepseek', model: 'deepseek-v4-flash', messages: [],
+        provider: 'deepseek', model: 'deepseek-flash', messages: [],
       })) { /* drain */ }
     }
 

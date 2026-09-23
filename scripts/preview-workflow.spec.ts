@@ -48,7 +48,7 @@ describe('PR preview workflow', () => {
     expect(shape.run).toContain("find apps/web/dist -name '*.map' -delete")
     expect(shape.run).toContain('cp apps/web/dist/preview.html apps/web/dist/index.html')
     const deploy = preview.steps.find(step => step.name === 'Upload to Cloudflare Pages')!
-    expect(deploy.run).toContain('npx --yes wrangler@4 pages deploy apps/web/dist')
+    expect(deploy.run).toContain('npx --yes wrangler@4.136.3 pages deploy apps/web/dist')
     expect(deploy.run).toContain('--branch "pr-${{ github.event.pull_request.number }}"')
     const verify = preview.steps.find(step => step.name === 'Verify the protected deployment serves the image')!
     expect(verify.run).toContain('/preview/vfs-image.tar.gz')

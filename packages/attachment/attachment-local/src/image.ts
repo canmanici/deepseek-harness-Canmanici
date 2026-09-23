@@ -49,6 +49,47 @@ const MEDIA_TYPES: Readonly<Record<string, ImageMediaType>> = {
   gif: 'image/gif',
 }
 
+function startsWith(data: Uint8Array, offset: number, bytes: readonly number[]): boolean {
+  if (data.length < offset + bytes.length) return false
+  return bytes.every((byte, index) => data[offset + index] === byte)
+}
+
+function ascii(text: string): readonly number[] {
+  return [...text].map(character => character.charCodeAt(0))
+}
+
+const PNG_SIGNATURE = [0x89, ...ascii('PNG\r\n\u001a\n')]
+const JPEG_SIGNATURE = [0xff, 0xd8, 0xff]
+const GIF_SIGNATURES = [ascii('GIF87a'), ascii('GIF89a')]
+const RIFF_TAG = ascii('RIFF')
+const WEBP_TAG = ascii('WEBP')
+
+/**
+ * Classify bytes by container signature without invoking a decoder.
+ * @param data - complete encoded image bytes.
+ * @returns the admitted media type, or undefined when the container is not PNG, JPEG, WebP, or GIF.
+ */
+export function sniffImageMediaType(data: Uint8Array): ImageMediaType | undefined {
+  if (startsWith(data, 0, PNG_SIGNATURE)) return 'image/png'
+  if (startsWith(data, 0, JPEG_SIGNATURE)) return 'image/jpeg'
+  if (GIF_SIGNATURES.some(signature => startsWith(data, 0, signature))) return 'image/gif'
+  if (startsWith(data, 0, RIFF_TAG) && startsWith(data, 8, WEBP_TAG)) return 'image/webp'
+  return undefined
+}
+
+/**
+ * Refuse a container outside the four admitted raster formats before a decoder
+ * runs. The post-decode media-type comparison is too late for these bytes:
+ * libvips parses whatever container it recognizes first, and its loader
+ * families outside PNG/JPEG/WebP/GIF have carried memory-safety advisories.
+ * @param data - complete encoded image bytes.
+ */
+function assertAdmittedRaster(data: Uint8Array): void {
+  if (sniffImageMediaType(data) === undefined) {
+    throw new AttachmentError('Unsupported or malformed image data.', 'INVALID_IMAGE')
+  }
+}
+
 function carriesRetainedMetadata(metadata: Awaited<ReturnType<Sharp['metadata']>>): boolean {
   return metadata.exif !== undefined
     || metadata.xmp !== undefined
@@ -90,6 +131,7 @@ async function imageMetadata(image: Sharp): Promise<DetectedImage> {
  * @returns verified format and dimensions.
  */
 export async function probeImage(data: Uint8Array): Promise<DetectedImage> {
+  assertAdmittedRaster(data)
   const sharp = requireSharp()
   try {
     return await imageMetadata(sharp(data, { failOn: 'error', limitInputPixels: false }))
@@ -114,6 +156,7 @@ export interface DecodedImageLimits {
  * @returns verified format and dimensions.
  */
 export async function detectImage(data: Uint8Array, limits?: DecodedImageLimits): Promise<DetectedImage> {
+  assertAdmittedRaster(data)
   const sharp = requireSharp()
   try {
     const image = sharp(data, { failOn: 'error', limitInputPixels: false })

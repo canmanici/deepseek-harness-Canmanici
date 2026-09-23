@@ -201,14 +201,37 @@ function reasoningInfo(
   }
 }
 
-/** Merge deployment headers while removing case-insensitive attribution collisions. */
-function requestHeaders(headers: Readonly<Record<string, string>> | undefined): Record<string, string> {
+/**
+ * Merge deployment headers and this route's conversation header, then remove
+ * case-insensitive attribution collisions.
+ *
+ * The conversation header carries the request's session id and replaces a
+ * same-named deployment entry, because a fixed value cannot do a
+ * per-conversation id's job. The deployment entry still covers a request that
+ * names no session id, so a route whose gateway requires the header stays
+ * routable where the harness has no conversation to name.
+ * @param headers - deployment headers configured on the profile.
+ * @param sessionHeader - header name carrying the conversation id, when configured.
+ * @param sessionId - the request's conversation id, when it names one.
+ * @returns the headers to send, with attribution winning reserved names.
+ */
+function requestHeaders(
+  headers: Readonly<Record<string, string>> | undefined,
+  sessionHeader: string | undefined,
+  sessionId: string | undefined,
+): Record<string, string> {
   const attribution = attributionHeaders()
   const reserved = new Set(Object.keys(attribution).map(name => name.toLowerCase()))
-  return {
-    ...Object.fromEntries(Object.entries(headers ?? {}).filter(([name]) => !reserved.has(name.toLowerCase()))),
-    ...attribution,
+  const deployment = Object.fromEntries(
+    Object.entries(headers ?? {}).filter(([name]) => !reserved.has(name.toLowerCase())),
+  )
+  if (sessionHeader !== undefined && sessionId !== undefined) {
+    for (const name of Object.keys(deployment)) {
+      if (name.toLowerCase() === sessionHeader.toLowerCase()) Reflect.deleteProperty(deployment, name)
+    }
+    deployment[sessionHeader] = sessionId
   }
+  return { ...deployment, ...attribution }
 }
 
 /**
@@ -377,15 +400,16 @@ export class PiAiAdapter extends LlmAdapter {
             maxBytes: profile.requestImageMaxBytes,
           },
         }, onReplayDegrade)
+      const sessionId = options.sessionId === undefined ? undefined : String(options.sessionId)
       const events = snapshot.models.streamSimple(model, context, {
         ...profileOptions(profile, reasoning, apiKey),
         ...options.temperature === undefined ? {} : { temperature: options.temperature },
         ...options.maxTokens === undefined ? {} : { maxTokens: options.maxTokens },
-        ...options.sessionId === undefined ? {} : { sessionId: String(options.sessionId) },
+        ...sessionId === undefined ? {} : { sessionId },
         signal: watchdog.signal,
         // Profile headers are deployment-owned; attribution names are
         // Harness-owned and therefore win collisions.
-        headers: requestHeaders(profile.headers),
+        headers: requestHeaders(profile.headers, profile.sessionHeader, sessionId),
       })
       const iterator = toStreamChunks(events, model.contextWindow, options.signal, model.id)[Symbol.asyncIterator]()
       let exhausted = false

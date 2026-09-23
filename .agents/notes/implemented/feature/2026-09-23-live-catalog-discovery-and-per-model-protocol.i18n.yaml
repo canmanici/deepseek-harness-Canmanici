@@ -1,0 +1,6 @@
+# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
+# side as of the last confirmed-consistent state. Both languages carry equal authority;
+# after editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write .agents/notes/implemented/feature/2026-09-23-live-catalog-discovery-and-per-model-protocol.md
+2026-09-23-live-catalog-discovery-and-per-model-protocol.md: 19a8a213381fd50d57f20f4f104f4537afbe95ab
+2026-09-23-live-catalog-discovery-and-per-model-protocol.zh.md: 81316014d3af5f19726b74983be0b35000fe19b0

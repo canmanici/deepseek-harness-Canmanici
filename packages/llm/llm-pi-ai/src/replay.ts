@@ -10,7 +10,7 @@
 
 import { LlmError } from '@deepseek-ai/dsh-llm'
 import type { AssistantMessage as HarnessAssistantMessage, ModelMessageSource, ReplayEnvelope } from '@deepseek-ai/dsh-llm'
-import type { Api, AssistantMessage, Usage as PiUsage } from '@earendil-works/pi-ai'
+import type { Api, AssistantMessage, ToolCall, Usage as PiUsage } from '@earendil-works/pi-ai'
 
 /** Per-block half of the pi-ai replay envelope, one entry per content block. */
 export type PiAiReplayBlock =
@@ -40,12 +40,16 @@ interface PiAiReplayState {
   blocks: PiAiReplayBlock[]
 }
 
-/** Parse tool-call argument JSON; tolerate model malformations with {}. */
-function parseArguments(raw: string): Record<string, unknown> {
+/**
+ * Parse tool-call argument JSON into the JSON object pi-ai's `ToolCall`
+ * carries; tolerate model malformations with `{}`. Parsed JSON holds only JSON
+ * values, so the top-level object already satisfies that type.
+ */
+function parseArguments(raw: string): ToolCall['arguments'] {
   try {
     const parsed: unknown = JSON.parse(raw)
     if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
-      return parsed as Record<string, unknown>
+      return parsed as ToolCall['arguments']
     }
   } catch {
     // fall through

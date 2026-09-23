@@ -67,6 +67,11 @@ export interface ModelListEditorProps {
   models: readonly ModelDraft[]
   /** Installed provider whose catalog supplies defaults without endpoint I/O. */
   catalogProvider?: string | undefined
+  /**
+   * Protocols a row may name for itself, read from the owning schema. Absent
+   * leaves every row on the route's protocol and endpoint.
+   */
+  protocolChoices?: readonly string[] | undefined
   /** Route input types for models absent from the installed catalog. */
   defaultInput?: readonly string[] | undefined
   /** Whether the user layer currently owns the whole array; absent on a create. */
@@ -240,6 +245,10 @@ export function ModelListEditor(props: ModelListEditorProps): ReactNode {
         ...probe.baseURL === undefined || probe.baseURL.length === 0 ? {} : { baseURL: probe.baseURL },
         ...probe.api === undefined ? {} : { api: probe.api },
         ...probe.apiKey === undefined ? {} : { apiKey: probe.apiKey },
+        // The user pressed the button, so the endpoint answers: a route the
+        // adapter already describes would otherwise answer from its installed
+        // catalog and never disclose a model the catalog has not caught up with.
+        live: true,
       })
       if (answer.kind === 'refused') {
         setFailure(answer.message)
@@ -365,6 +374,15 @@ export function ModelListEditor(props: ModelListEditorProps): ReactNode {
             expanded={expanded.has(index)}
             disabled={disabled}
             t={t}
+            protocol={props.protocolChoices === undefined || props.protocolChoices.length === 0
+              ? undefined
+              : {
+                api: textOf(model, 'api') === '' ? undefined : textOf(model, 'api'),
+                choices: props.protocolChoices,
+                onApiChange: (api) => { patch(index, { api }) },
+                baseURL: textOf(model, 'baseURL') === '' ? undefined : textOf(model, 'baseURL'),
+                onBaseURLChange: (baseURL) => { patch(index, { baseURL }) },
+              }}
             contextWindow={{
               value: capacityText(model, index, 'contextWindow'),
               placeholder: CAPACITY_HINT.contextWindow,

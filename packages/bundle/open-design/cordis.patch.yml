@@ -1,0 +1,12 @@
+- insert:
+    - id: mcp-open-design
+      name: '@deepseek-ai/dsh-mcp-client'
+      config:
+        serverName: open-design
+        transport: stdio
+        command: !!js process.env.OPEN_DESIGN_MCP_COMMAND || 'od'
+        args:
+          - mcp
+          - --daemon-url
+          - !!js process.env.OPEN_DESIGN_DAEMON_URL || 'http://127.0.0.1:7456'
+        failOnStartupError: true

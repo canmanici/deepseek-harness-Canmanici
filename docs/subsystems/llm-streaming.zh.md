@@ -688,7 +688,7 @@ interface ToolSchema {
 
 面向模型的 `ToolSchema` 是协议类型；产出它的已注册 `ToolDefinition`（schema + `execute`）在 [tools.md](tools.zh.md) 中。
 
-界面正在起草的提供方既没有路由也没有 catalog，因此询问被单独描述：请求携带用户正在编辑的草稿，回复是界面可以采纳的候选，而不是它必须服务的 catalog。
+界面正在起草的提供方既没有路由也没有 catalog，因此询问被单独描述：请求携带用户正在编辑的草稿，回复是界面可以采纳的候选，而不是它必须服务的 catalog。调用者也可以为其适配器已描述的路由要求实时回答，这正是比该适配器已安装 catalog 更新的模型到达界面的方式。
 
 ```ts type-equiv
 /**
@@ -702,9 +702,17 @@ interface LlmModelDiscoveryRequest {
    * Route the draft is editing, when it edits an existing one. A route whose
    * adapter already knows its models answers from that knowledge instead of
    * asking the endpoint — the adapter's own registry is the better answer, and
-   * it costs no network call.
+   * it costs no network call — unless {@link live} asks for the endpoint too.
    */
   provider?: string
+  /**
+   * Whether the caller wants a live answer for a route the adapter already
+   * describes. Absent keeps the adapter's own answer, which costs no network
+   * call and carries facts a listing does not disclose; `true` asks the
+   * route's endpoint as well, so a model newer than the adapter's installed
+   * knowledge still appears. A route no adapter describes is asked either way.
+   */
+  live?: boolean
   /**
    * Endpoint to interrogate. Optional because a route the adapter already
    * describes needs none; a route it does not must supply one.

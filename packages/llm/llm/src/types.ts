@@ -279,9 +279,17 @@ export interface LlmModelDiscoveryRequest {
    * Route the draft is editing, when it edits an existing one. A route whose
    * adapter already knows its models answers from that knowledge instead of
    * asking the endpoint — the adapter's own registry is the better answer, and
-   * it costs no network call.
+   * it costs no network call — unless {@link live} asks for the endpoint too.
    */
   provider?: string
+  /**
+   * Whether the caller wants a live answer for a route the adapter already
+   * describes. Absent keeps the adapter's own answer, which costs no network
+   * call and carries facts a listing does not disclose; `true` asks the
+   * route's endpoint as well, so a model newer than the adapter's installed
+   * knowledge still appears. A route no adapter describes is asked either way.
+   */
+  live?: boolean
   /**
    * Endpoint to interrogate. Optional because a route the adapter already
    * describes needs none; a route it does not must supply one.

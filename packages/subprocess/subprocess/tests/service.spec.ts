@@ -100,4 +100,29 @@ describe('SubprocessRuntime seam', () => {
       delete process.env.SCRUB_PROBE_PLAIN
     }
   })
+
+  it('scrubbedParentEnv drops credential locations that carry no keyword in their name', () => {
+    process.env.SSH_AUTH_SOCK = '/tmp/agent.sock'
+    process.env.ssh_auth_sock = '/tmp/agent-lower.sock'
+    process.env.KUBECONFIG = '/home/user/.kube/config'
+    process.env.GOOGLE_APPLICATION_CREDENTIALS = '/home/user/adc.json'
+    process.env.AWS_PROFILE = 'production'
+    process.env.SCRUB_PROBE_UNRELATED = 'visible'
+    try {
+      const env = scrubbedParentEnv()
+      expect(env.SSH_AUTH_SOCK).toBeUndefined()
+      expect(env.ssh_auth_sock).toBeUndefined()
+      expect(env.KUBECONFIG).toBeUndefined()
+      expect(env.GOOGLE_APPLICATION_CREDENTIALS).toBeUndefined()
+      expect(env.AWS_PROFILE).toBeUndefined()
+      expect(env.SCRUB_PROBE_UNRELATED).toBe('visible')
+    } finally {
+      delete process.env.SSH_AUTH_SOCK
+      delete process.env.ssh_auth_sock
+      delete process.env.KUBECONFIG
+      delete process.env.GOOGLE_APPLICATION_CREDENTIALS
+      delete process.env.AWS_PROFILE
+      delete process.env.SCRUB_PROBE_UNRELATED
+    }
+  })
 })

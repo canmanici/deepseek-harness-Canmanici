@@ -1,6 +1,6 @@
 import sharp from 'sharp'
 import { describe, expect, it } from 'vitest'
-import { detectImage, probeImage } from '../src/image.ts'
+import { detectImage, probeImage, sniffImageMediaType } from '../src/image.ts'
 
 async function raster(format: 'png' | 'jpeg' | 'webp' | 'gif'): Promise<Uint8Array> {
   const image = sharp({
@@ -87,5 +87,25 @@ describe('raster decoding', () => {
       create: { width: 1, height: 1, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 1 } },
     }).tiff().toBuffer()
     await expect(probeImage(unsupported)).rejects.toMatchObject({ code: 'INVALID_IMAGE' })
+  })
+
+  it('classifies every admitted container from its signature', () => {
+    const text = (value: string): Uint8Array => new Uint8Array(Buffer.from(value))
+    expect(sniffImageMediaType(text('PNG'))).toBeUndefined()
+    expect(sniffImageMediaType(new Uint8Array(Buffer.from('89504e470d0a1a0a', 'hex')))).toBe('image/png')
+    expect(sniffImageMediaType(new Uint8Array(Buffer.from('ffd8ffe0', 'hex')))).toBe('image/jpeg')
+    expect(sniffImageMediaType(text('GIF87a'))).toBe('image/gif')
+    expect(sniffImageMediaType(text('GIF89a'))).toBe('image/gif')
+    expect(sniffImageMediaType(text('RIFF0000WEBP'))).toBe('image/webp')
+  })
+
+  it('refuses containers outside the admitted formats before a decoder runs', async () => {
+    const text = (value: string): Uint8Array => new Uint8Array(Buffer.from(value))
+    expect(sniffImageMediaType(text('RIFF0000WAVE'))).toBeUndefined()
+    expect(sniffImageMediaType(text('II*\u0000'))).toBeUndefined()
+    expect(sniffImageMediaType(Uint8Array.of(0x89))).toBeUndefined()
+    const svg = text('<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"/>')
+    await expect(detectImage(svg)).rejects.toMatchObject({ code: 'INVALID_IMAGE' })
+    await expect(probeImage(svg)).rejects.toMatchObject({ code: 'INVALID_IMAGE' })
   })
 })

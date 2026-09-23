@@ -13,14 +13,20 @@ import type {
 } from '@earendil-works/pi-ai'
 import { THINKING_LEVELS } from './catalog.ts'
 
-/** Input accepted by the static, single-protocol providers this package builds. */
+/** Input accepted by the static providers this package builds. */
 interface StaticProviderOptions {
   id: string
   name: string
   baseUrl?: string
   auth: ProviderAuth
   models: readonly Model<Api>[]
-  api: ProviderStreams
+  /**
+   * Protocol implementations keyed by `model.api`. A route may serve several
+   * wire formats, and the model record is what says which one reaches it, so
+   * dispatch reads that field; a model whose api has no entry fails its stream
+   * rather than being sent through another protocol's implementation.
+   */
+  api: Readonly<Record<string, ProviderStreams>>
 }
 
 /**
@@ -35,19 +41,26 @@ export function createModels(options?: CreateModelsOptions): MutableModels {
 }
 
 /**
- * Create the static, single-protocol provider used by configured custom routes.
- * @param input - provider identity, models, authentication, and protocol implementation.
- * @returns a provider that delegates each operation to the supplied protocol.
+ * Create the static provider used by configured routes.
+ * @param input - provider identity, models, authentication, and protocol implementations.
+ * @returns a provider that delegates each operation to the protocol its model names.
  */
 export function createProvider(input: StaticProviderOptions): Provider {
+  const implementation = (model: Model<Api>): ProviderStreams => {
+    const streams = input.api[model.api]
+    if (streams === undefined) {
+      throw new Error(`provider ${input.id} has no API implementation for "${model.api}"`)
+    }
+    return streams
+  }
   return {
     id: input.id,
     name: input.name,
     ...input.baseUrl === undefined ? {} : { baseUrl: input.baseUrl },
     auth: input.auth,
     getModels: () => input.models,
-    stream: (model, context, options) => input.api.stream(model, context, options),
-    streamSimple: (model, context, options) => input.api.streamSimple(model, context, options),
+    stream: (model, context, options) => implementation(model).stream(model, context, options),
+    streamSimple: (model, context, options) => implementation(model).streamSimple(model, context, options),
   }
 }
 

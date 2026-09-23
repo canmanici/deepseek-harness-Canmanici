@@ -88,7 +88,8 @@ describe('request-level dynamic profiles', () => {
     await writeFile(join(dir, '.credentials.yaml'), 'version: 1\nrefs:\n  PI_DYNAMIC_KEY: fake-key\n', { mode: 0o600 })
     const ctx = await boot(dir, stored)
     const failure = 'llm-pi-ai: provider "openrouter" model "111" needs an api; '
-      + 'the installed catalog does not describe it, so set the route\'s api to the wire protocol its endpoint speaks'
+      + 'the installed catalog does not describe it, so set the model\'s api to the wire protocol its endpoint'
+      + ' speaks, or the route\'s api when every model shares one'
 
     expect(ctx.llm.listProviders()).toEqual([{ id: 'openrouter', name: 'openrouter' }])
     expect(ctx.llm.listConfigurableProviders()).toContainEqual({
@@ -170,7 +171,7 @@ describe('request-level dynamic profiles', () => {
     expect(ctx.llm.listProviders().map(provider => provider.id)).toEqual(['deepseek'])
     await expect(ctx.llm.listModels('deepseek')).resolves.not.toHaveLength(0)
 
-    const result = await assemble(ctx, { provider: 'deepseek', model: 'deepseek-v4-flash', messages: [] })
+    const result = await assemble(ctx, { provider: 'deepseek', model: 'deepseek-flash', messages: [] })
     expect(result.message.content).toEqual([{ type: 'text', text: 'hello' }])
     expect(server.headers[0]?.authorization).toBe('Bearer pk-from-settings')
 
@@ -197,7 +198,7 @@ describe('request-level dynamic profiles', () => {
     })
     expect(ctx.llm.listProviders().map(provider => provider.id)).toEqual(['openai', 'deepseek'])
 
-    const result = await assemble(ctx, { provider: 'deepseek', model: 'deepseek-v4-flash', messages: [] })
+    const result = await assemble(ctx, { provider: 'deepseek', model: 'deepseek-flash', messages: [] })
     expect(result.message.content).toEqual([{ type: 'text', text: 'hello' }])
     expect(server.headers[0]?.authorization).toBe('Bearer live-key')
 
@@ -205,7 +206,7 @@ describe('request-level dynamic profiles', () => {
     // composition route stays.
     await configurations.get(ctx)!.replace(initialConfigs.get(ctx)!)
     expect(ctx.llm.listProviders().map(provider => provider.id)).toEqual(['openai'])
-    const removed = await assemble(ctx, { provider: 'deepseek', model: 'deepseek-v4-flash', messages: [] })
+    const removed = await assemble(ctx, { provider: 'deepseek', model: 'deepseek-flash', messages: [] })
     expect(removed.finish).toMatchObject({ kind: 'error', failure: { code: 'NO_ADAPTER' } })
   })
 
@@ -218,11 +219,11 @@ describe('request-level dynamic profiles', () => {
       providers: { deepseek: { apiKeyEnv: 'PI_DYNAMIC_KEY', baseURL: server.url } },
     })
 
-    await assemble(ctx, { provider: 'deepseek', model: 'deepseek-v4-flash', messages: [] })
+    await assemble(ctx, { provider: 'deepseek', model: 'deepseek-flash', messages: [] })
     expect(server.headers[0]?.authorization).toBe('Bearer pk-one')
 
     await ctx.credentials.set(credentialRef('PI_DYNAMIC_KEY'), 'pk-two')
-    await assemble(ctx, { provider: 'deepseek', model: 'deepseek-v4-flash', messages: [] })
+    await assemble(ctx, { provider: 'deepseek', model: 'deepseek-flash', messages: [] })
     expect(server.headers[1]?.authorization).toBe('Bearer pk-two')
   })
 

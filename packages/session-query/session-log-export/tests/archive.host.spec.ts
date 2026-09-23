@@ -767,6 +767,15 @@ describe('session.export download endpoint', () => {
     expect(files['media/img-1.png']).toEqual(storedImage('img-1').data)
   })
 
+  it('refuses a traversal attachment id from a log instead of writing it into the archive', async () => {
+    const stored = log('session-root', undefined, [imageEvent('../../escape')])
+    const api = await buildApi({ 'session-root': stored })
+    const response = await toFetchHandler(api).fetch(
+      new Request('http://host/api/session.export?sessionId=session-root'),
+    )
+    await expect(responseBytes(response)).rejects.toThrow('not a safe archive path segment')
+  })
+
   it('streams generic files under their content-addressed archive paths', async () => {
     const digest = 'a'.repeat(64)
     const id = `sha256:${digest}`

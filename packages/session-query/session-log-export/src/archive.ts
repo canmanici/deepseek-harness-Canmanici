@@ -177,6 +177,22 @@ const MEDIA_TYPE_EXTENSIONS: Record<ImageAttachmentRef['mediaType'], string> = {
 }
 
 /**
+ * Refuse an attachment id that is not one safe archive path segment. Session
+ * logs are untrusted input here and the id becomes a path component; the
+ * attachment store validates its own references, but an archive must not rely
+ * on another layer to keep a traversal name out of the ZIP.
+ * @param id - opaque reference id read from a session log.
+ * @returns the id when it is a single safe segment.
+ */
+function archiveSegment(id: unknown): string {
+  const text = String(id)
+  if (text === '' || text === '.' || text === '..' || /[\\/\u0000-\u001f\u007f]/u.test(text)) {
+    throw new Error('Session log attachment reference is not a safe archive path segment')
+  }
+  return text
+}
+
+/**
  * The zip path for one media object: content-addressed by the opaque
  * attachment id so shared images land once and the id in the log maps back to
  * the archive entry without a manifest.
@@ -184,12 +200,12 @@ const MEDIA_TYPE_EXTENSIONS: Record<ImageAttachmentRef['mediaType'], string> = {
  * @returns the archive path.
  */
 function mediaEntryPath(ref: ImageAttachmentRef): string {
-  return `media/${String(ref.attachmentId)}.${MEDIA_TYPE_EXTENSIONS[ref.mediaType]}`
+  return `media/${archiveSegment(ref.attachmentId)}.${MEDIA_TYPE_EXTENSIONS[ref.mediaType]}`
 }
 
 /** Archive path that preserves one stored file reference's digest and name. */
 function fileEntryPath(ref: FileAttachmentRef): string {
-  const digest = String(ref.attachmentId).replace(/^sha256:/u, '')
+  const digest = archiveSegment(String(ref.attachmentId).replace(/^sha256:/u, ''))
   const name = ref.name.replace(/[\\/\u0000-\u001f\u007f]/gu, '_')
   const safeName = name === '.' || name === '..' || name === '' ? 'file' : name
   return `files/${digest.slice(0, 2)}/${digest}/${safeName}`
