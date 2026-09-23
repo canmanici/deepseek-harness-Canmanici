@@ -61,6 +61,31 @@ interface SkillProviderControl {
 }
 ```
 
+## 启用过滤器
+
+过滤器决定每次读取暴露哪些合并胜出项。`ctx.skills.registerFilter()` 按唯一名称注册一个宿主范围的过滤器；注册、释放以及控制对象的 `invalidate()` 都会发出 `skills/change`。`list`、`snapshot` 和 `get` 为本次查找解析所有过滤器，并省略被任一过滤器禁用的胜出项，因此模型目录、`skill` 工具、`/name` 调用和浏览器 Session 目录观察到相同的决定。同名的低优先级候选项不会替代被禁用的胜出项。`resolve()` 被拒绝时读取也会被拒绝，而不会暴露过滤器本应禁用的 skill。过滤器收到的 `SkillFilterControl` 与 `SkillProviderControl` 具有相同的 `signal` 和 `invalidate()` 成员。`inventory()` 返回 `SkillInventorySnapshot`：为管理界面列出每个胜出项及其 `enabled` 和禁用它的过滤器名称；它从不加载正文。
+
+```ts type-equiv
+/**
+ * Enablement policy the registry applies to merged winners before any read
+ * lists or loads them. A disabled winner is absent from every surface; a
+ * lower-ranked candidate with the same name does not take its place.
+ */
+interface SkillFilter {
+  /** Unique filter name, reported as the reason in {@link SkillInventoryEntry.disabledBy}. */
+  readonly name: string
+  /**
+   * Resolve the predicate for one lookup. A rejection rejects the calling
+   * read, so a failing policy never exposes a skill it would disable.
+   * @param options - lookup options; `cwd` selects workspace-sensitive policy and `signal` cancels work.
+   * @returns the predicate applied to every merged winner of this lookup.
+   */
+  readonly resolve: (options: SkillLookupOptions) => Promise<SkillEnablement>
+}
+```
+
+随附的过滤器是 [dsh-skill-preferences](../../packages/skill/skill-preferences)：全局禁用保存在 `<dshHome>/skill-preferences.json` 中，并可按项目根目录用 `enabled` 和 `disabled` 列表覆盖。`ctx.skillPreferences.state()` 以 `SkillPreferencesState` 返回该文件；`setEnabled()` 接收 `SetSkillEnabledRequest`，`clearOverride()` 接收 `ClearSkillOverrideRequest`，`decide()` 返回 `SkillEnablementDecision`，指明做出决定的级别（`default`、`global` 或 `project`）。
+
 ## 本地发现优先级
 
 随附的本地提供方按 rank 顺序扫描各根目录：
@@ -71,6 +96,7 @@ interface SkillProviderControl {
 | 200 | `project-agents` | `<projectRoot>/.agents/skills` |
 | 300 | `custom` | `Config.customSkillDirs` |
 | 400 | `user-dsh` | `<dshHome>/skills` |
+| 450 | `remote:<id>` | [dsh-skill-sources](../../packages/skill/skill-sources) 已同步的代，而非本地根目录 |
 | 500 | `user-agents` | `<agentsHome>/skills` |
 | 600 | `bundled` | 配置了 `Config.bundledSkillDir` 时使用该目录 |
 
@@ -79,6 +105,14 @@ interface SkillProviderControl {
 `dsh-skill-badge` 在 `BUNDLED_SKILL_RANK` 注册一个不可变的 `bundled` 候选项，并通过 `resourceBase` 公开其随包资产目录。交付的 CLI（命令行界面）将该插件声明为禁用，因此启用其组合配置行即为显式选择加入。
 
 Chokidar 会监视现有根目录中直属 bundle 和平铺条目的添加与移除，以及直属 skill 条目的变更。缺失的根目录会从最近的现有祖先开始，逐个跟踪缺失路径段，直至 Chokidar 可以附加。bundle 下的资源文件变更不属于目录变更。面向模型的 `write` 和 `edit` 观测会在目标路径与目录相关时同步使提供方目录失效，而宿主 watcher 覆盖 IDE、Git、shell 和外部进程产生的变更。watcher 失败会使当前观测不完整，但不会在直接加载时隐藏可读候选项；项目作用域 watcher 使用按配置设限的 LRU。
+
+## 远程来源
+
+[dsh-skill-sources](../../packages/skill/skill-sources) 通过 `ctx.skillSources` 从 GitHub 仓库、ZIP 归档和单个 skill 文件 URL 贡献 skill。每次同步把来源下载到 `<dshHome>/skill-sources/<id>/` 下以提交命名的代中，在此时发现包含有效 `SKILL.md` 的目录，并将其记录在清单中；`list()` 只读取已启用来源的内存清单，因此目录查找永远不会访问网络。远程候选项的来源为 `remote:<id>`，rank 为 450，因此 `<dshHome>/skills` 中的副本会取代同名的远程 skill。来源可以只安装其 skill 的一个选择，`checkUpdate()` 在不下载的情况下比较 GitHub 来源的最新提交与已同步的提交。`ctx.skillSources.list()` 返回 `SkillSourceView` 值，`add()` 接收 `AddSkillSourceRequest`。随附的 base 组合将 Anthropic 公共仓库列为默认来源，并且只在 `web` 和 `desktop` profile 中于启动时同步从未同步过的来源。
+
+## Skills 页面与智能体管理
+
+位于侧边栏 **Plugins** 下方的 Web **Skills** 页面调用 [dsh-host-skill-manager](../../packages/host/skill-manager) 的 `skillManager` Remote。它在默认 agent 预设的作用域中读取 `ctx.skills.inventory()`，通过 `ctx.skillPreferences` 写入启用状态，通过 [dsh-skill-marketplace](../../packages/skill/skill-marketplace) 搜索公开市场，通过 `ctx.skillSources` 安装单个 skill 并检查更新，就地编辑本地 skill，通过复制到 `<dshHome>/skills` 来自定义远程和内置 skill，并在那里创建和删除用户 skill。智能体和子智能体通过 [dsh-tool-skill-manage](../../packages/skill/tool-skill-manage) 的 `manage_skills` 工具更改启用状态，它写入相同的偏好。每次写入文件后它会发出 `skill-filesystem/changed`，本地提供方将其视同第一方 `write`：目录会立即失效，即使该根目录在其监视器启动时尚不存在。
 
 ## skill 身份
 
@@ -263,6 +297,250 @@ Host service backing `ctx.remote.skills` without activating a cold Agent.
 
 Source: [`packages/api/session-controller/src/skill-catalog.ts`](../../packages/api/session-controller/src/skill-catalog.ts)
 
+<a id="ctxskillmanager--skillmanager"></a>
+
+### `ctx.skillManager` — `SkillManager`
+
+Remote service behind the Skills settings page. Reads go through `ctx.skills.inventory()` in the default agent preset's scope, so the page lists the skills a new session sees; writes delegate to `ctx.skillPreferences` and `ctx.skillSources`, which own validation and persistence. Any catalog, preference, or source change is forwarded as `skill-manager/changed`.
+
+```ts cordis-catalog
+/**
+ * Read every installed skill with its enablement for one view.
+ * @param request - optional project root selecting per-project overrides and project skills.
+ * @returns sorted skills, workspace projects, and which management services are mounted.
+ * @throws RemoteError when the project root is not absolute.
+ */
+@Remote async inventory(request: SkillInventoryRequest): Promise<SkillInventoryValue>
+
+/**
+ * Enable or disable one skill globally or for one project.
+ * @param request - skill name, target enablement, and optional project root.
+ * @throws RemoteError when skill preferences are not mounted or the request is invalid.
+ */
+@Remote async setEnabled(request: SetSkillEnabledRequest): Promise<void>
+
+/**
+ * Remove one project override so the global preference applies.
+ * @param request - skill name and project root.
+ * @throws RemoteError when skill preferences are not mounted or the request is invalid.
+ */
+@Remote async clearOverride(request: ClearSkillOverrideRequest): Promise<void>
+
+/**
+ * List remote skill sources with their sync status.
+ * @returns every source; empty when remote sources are not mounted.
+ */
+@Remote sources(): Promise<SkillSourcesValue>
+
+/**
+ * Add a remote source and start its first sync.
+ * @param request - URL with optional ref and subdirectory.
+ * @returns the added source.
+ * @throws RemoteError when sources are not mounted or the URL is unsupported.
+ */
+@Remote async addSource(request: AddSkillSourceRequest): Promise<SkillSourceValue>
+
+/**
+ * Download one source again.
+ * @param request - source id.
+ * @returns the source after the sync settles; failures appear in `error`.
+ * @throws RemoteError when sources are not mounted or the id is unknown.
+ */
+@Remote async syncSource(request: SkillSourceRequest): Promise<SkillSourceValue>
+
+/**
+ * Enable or disable one source's skills.
+ * @param request - source id and target enablement.
+ * @returns the updated source.
+ * @throws RemoteError when sources are not mounted or the id is unknown.
+ */
+@Remote async setSourceEnabled(request: SetSkillSourceEnabledRequest): Promise<SkillSourceValue>
+
+/**
+ * Remove one source; a default source stays hidden afterwards.
+ * @param request - source id.
+ * @throws RemoteError when sources are not mounted or the id is unknown.
+ */
+@Remote async removeSource(request: SkillSourceRequest): Promise<void>
+
+/**
+ * Read any installed skill's stored fields, for preview or, when editable, for editing.
+ * @param request - skill name.
+ * @returns the stored fields, file path, and whether the page may change the skill.
+ * @throws RemoteError when the skill has no readable file.
+ */
+@Remote async readSkill(request: SkillNameRequest): Promise<SkillDocumentValue>
+
+/**
+ * Create a skill in the user skills directory.
+ * @param request - the new skill's fields.
+ * @returns the stored fields and file path.
+ * @throws RemoteError when the name is taken by any installed skill or the fields are invalid.
+ */
+@Remote async createSkill(request: SkillDraft): Promise<SkillDocumentValue>
+
+/**
+ * Replace a local skill's fields in place, keeping other frontmatter keys.
+ * @param request - the skill's new fields; the name selects the skill.
+ * @returns the stored fields and file path.
+ * @throws RemoteError when the winning skill is not a local file or the fields are invalid.
+ */
+@Remote async updateSkill(request: SkillDraft): Promise<SkillDocumentValue>
+
+/**
+ * Delete a user skill's files. Deleting a customized copy restores the original.
+ * @param request - skill name.
+ * @throws RemoteError when the skill is not a user skill.
+ */
+@Remote async deleteSkill(request: SkillNameRequest): Promise<void>
+
+/**
+ * Copy a remote or bundled skill's directory into the user skills directory,
+ * where the copy outranks the original, so it can be edited. Deleting the
+ * copy restores the original.
+ * @param request - skill name.
+ * @returns the copy's stored fields and path.
+ * @throws RemoteError when the skill is local already, has no file, or a user skill of that name exists.
+ */
+@Remote async customizeSkill(request: SkillNameRequest): Promise<SkillDocumentValue>
+
+/**
+ * List the marketplaces the Host searches.
+ * @param request - `refresh` asks browsable marketplaces for their skill counts first.
+ * @returns marketplaces in configuration order.
+ */
+@Remote async marketplaces(request: SkillMarketplacesRequest): Promise<SkillMarketplacesValue>
+
+/**
+ * Search public marketplaces and mark entries that are installed already.
+ * @param request - query, optional marketplace, offset, and page size.
+ * @returns entries with install state, totals, and per-marketplace failures.
+ * @throws RemoteError when the marketplace service is not mounted or the marketplace id is unknown.
+ */
+@Remote async searchMarketplace(request: SearchMarketplaceRequest): Promise<SearchMarketplaceValue>
+
+/**
+ * Install one marketplace skill: add it to the selection of the source that
+ * already tracks its repository, or add a source for the repository that
+ * installs only this skill, then wait for the sync. A disabled source that
+ * installed every skill is narrowed to this skill before it is re-enabled.
+ * @param request - repository, optional directory, and name.
+ * @returns the source that installs the skill.
+ * @throws RemoteError when sources are not mounted, the repository is invalid,
+ *   or the synced repository contains no skill matching the request.
+ */
+@Remote async installSkill(request: InstallSkillRequest): Promise<SkillSourceValue>
+
+/**
+ * Uninstall one remote skill by removing it from its source's selection; a
+ * user source left with no skills is removed.
+ * @param request - skill name.
+ * @throws RemoteError when the winning skill is not a remote skill.
+ */
+@Remote async uninstallSkill(request: SkillNameRequest): Promise<void>
+
+/**
+ * List the skills one source offers and which are installed.
+ * @param request - source id.
+ * @returns offers in discovery order.
+ * @throws RemoteError when sources are not mounted or the id is unknown.
+ */
+@Remote async sourceSkills(request: SkillSourceRequest): Promise<SkillSourceSkillsValue>
+
+/**
+ * Replace which of a source's skills are installed.
+ * @param request - source id and selection; omitted installs every skill.
+ * @returns the updated source.
+ * @throws RemoteError when sources are not mounted or the id is unknown.
+ */
+@Remote async setSourceSkills(request: SetSkillSourceSkillsRequest): Promise<SkillSourceValue>
+
+/**
+ * Ask upstream whether each GitHub source has a newer commit.
+ * @returns every source with refreshed update flags.
+ */
+@Remote async checkUpdates(): Promise<SkillSourcesValue>
+```
+
+Source: [`packages/host/skill-manager/src/index.ts`](../../packages/host/skill-manager/src/index.ts)
+
+<a id="ctxskillmarketplace--skillmarketplace"></a>
+
+### `ctx.skillMarketplace` — `SkillMarketplace`
+
+Searches public skill marketplaces. Responses are cached per URL for `cacheTtlMs`; a failed marketplace is reported beside the others' results instead of failing the search.
+
+```ts cordis-catalog
+/**
+ * List marketplaces with the counts the latest {@link refreshCounts} found.
+ * @returns marketplaces in configuration order.
+ */
+list(): MarketplaceView[]
+
+/**
+ * Ask every enabled browsable marketplace how many skills it offers.
+ * @returns the refreshed list.
+ */
+async refreshCounts(): Promise<MarketplaceView[]>
+
+/**
+ * Search one or every enabled marketplace.
+ * @param request - query, optional marketplace, offset, and page size.
+ * @returns merged entries, totals, and per-marketplace failures.
+ * @throws Error when `marketplace` names an unknown or disabled marketplace.
+ */
+async search(request: MarketplaceSearchRequest): Promise<MarketplaceSearchResult>
+```
+
+Source: [`packages/skill/skill-marketplace/src/index.ts`](../../packages/skill/skill-marketplace/src/index.ts)
+
+<a id="ctxskillpreferences--skillpreferences"></a>
+
+### `ctx.skillPreferences` — `SkillPreferences`
+
+Persistent global and per-project skill enablement, enforced as a `ctx.skills` filter. Mutations serialize through a cross-process file lock, commit with an atomic rename, and only then update the in-memory state and invalidate the skill catalog.
+
+```ts cordis-catalog
+/**
+ * Read the committed preferences.
+ * @returns the current state; callers must not mutate it.
+ */
+state(): SkillPreferencesState
+
+/**
+ * Resolve the project root a cwd keys on, matching project skill discovery.
+ * @param cwd - workspace directory.
+ * @returns the absolute project root.
+ */
+async projectRootOf(cwd: string): Promise<string>
+
+/**
+ * Explain one skill's enablement.
+ * @param name - kebab-case skill name.
+ * @param projectRoot - absolute project root; omitted reads the global level only.
+ * @returns the enablement and the level that decided it.
+ */
+decide(name: string, projectRoot?: string): SkillEnablementDecision
+
+/**
+ * Enable or disable one skill globally or for one project. A project change
+ * records an override only when it differs from the global preference and
+ * removes a redundant one.
+ * @param request - skill name, target enablement, and optional project root.
+ * @returns the committed state.
+ */
+async setEnabled(request: SetSkillEnabledRequest): Promise<SkillPreferencesState>
+
+/**
+ * Remove one project override so the global preference applies.
+ * @param request - skill name and project root.
+ * @returns the committed state.
+ */
+async clearOverride(request: ClearSkillOverrideRequest): Promise<SkillPreferencesState>
+```
+
+Source: [`packages/skill/skill-preferences/src/index.ts`](../../packages/skill/skill-preferences/src/index.ts)
+
 <a id="ctxskills--skillregistry"></a>
 
 ### `ctx.skills` — `SkillRegistry`
@@ -295,7 +573,18 @@ registerProvider(create: (control: SkillProviderControl) => SkillProvider): () =
 register(skill: SkillRegistration): () => void
 
 /**
- * List invocation-neutral skill summaries for a workspace. Consumers apply
+ * Register a borrowed same-process enablement filter synchronously during
+ * plugin apply. Filters are host-wide: every scope's reads apply every
+ * registered filter. Registration, disposal, and the control's
+ * `invalidate()` emit `skills/change`.
+ * @param create - synchronous factory receiving this registration's lifecycle and invalidation control.
+ * @returns the exact Cordis effect disposer that unregisters this filter.
+ */
+registerFilter(create: (control: SkillFilterControl) => SkillFilter): () => Promise<void>
+
+/**
+ * List enabled invocation-neutral skill summaries for a workspace; merged
+ * winners disabled by a registered filter are omitted. Consumers apply
  * model or user invocation policy at their operational boundary. Lookup
  * options and provider candidates are readonly same-process values borrowed
  * throughout discovery.
@@ -305,17 +594,27 @@ register(skill: SkillRegistration): () => void
 async list(options: SkillViewOptions = {}): Promise<SkillSummary[]>
 
 /**
- * Observe the current invocation-neutral catalog and whether discovery completed within a stable revision.
- * Incomplete observations are never cached, allowing consumers to retain last-good state and
- * retry on their next request boundary.
+ * Observe the current enabled invocation-neutral catalog and whether discovery completed within a stable revision.
+ * Winners disabled by a registered filter are omitted. Incomplete observations are never cached, allowing
+ * consumers to retain last-good state and retry on their next request boundary.
  * @param options - view options; `scope` selects the viewing agent's layers, `cwd` selects project roots, and `signal` cancels discovery.
  * @returns sorted summaries plus discovery-completeness state.
  */
 async snapshot(options: SkillViewOptions = {}): Promise<SkillCatalogSnapshot>
 
 /**
+ * Observe every merged winner, including those disabled by filters, for
+ * management surfaces. Model and user catalogs read {@link snapshot} instead.
+ * @param options - view options; `scope` selects the viewing agent's layers,
+ *   `cwd` selects project roots and filter policy, and `signal` cancels discovery.
+ * @returns sorted winners with their enablement plus discovery-completeness state.
+ */
+async inventory(options: SkillViewOptions = {}): Promise<SkillInventorySnapshot>
+
+/**
  * Load and validate the winning candidate, passing its opaque discovery locator back to the
- * provider. Cancellation is rechecked after selection, including cache hits, and raced against
+ * provider. A winner disabled by a registered filter is not loaded. Cancellation is rechecked
+ * after selection, including cache hits, and raced against
  * loading so an uncooperative provider cannot hang the caller.
  * @param name - kebab-case skill name.
  * @param options - view options; `scope` selects the viewing agent's layers,
@@ -327,6 +626,163 @@ async get(name: string, options: SkillViewOptions = {}): Promise<SkillDefinition
 
 Source: [`packages/skill/skill/src/index.ts`](../../packages/skill/skill/src/index.ts)
 
+<a id="ctxskillsources--skillsources"></a>
+
+### `ctx.skillSources` — `SkillSources`
+
+Remote skill sources synced to disk and exposed as a `ctx.skills` provider. Source-list mutations serialize through a cross-process file lock and commit atomically; a sync replaces a source's generation only after extraction and discovery succeed, so a failed sync keeps the previous skills.
+
+```ts cordis-catalog
+/**
+ * List every source with its sync status.
+ * @returns sources in configuration order, then user sources in insertion order.
+ */
+list(): SkillSourceView[]
+
+/**
+ * Add a user source and start its first sync.
+ * @param request - URL, optional ref, subdirectory, and id.
+ * @returns the added source, in the `syncing` state.
+ * @throws Error when the URL is unsupported or the id is taken.
+ */
+async add(request: AddSkillSourceRequest): Promise<SkillSourceView>
+
+/**
+ * Remove a source and its synced files. A default source is hidden rather
+ * than deleted, so configuration does not bring it back.
+ * @param id - source id.
+ */
+async remove(id: string): Promise<void>
+
+/**
+ * Enable or disable a source's skills without deleting synced files.
+ * @param id - source id.
+ * @param enabled - target enablement.
+ * @returns the updated source.
+ */
+async setEnabled(id: string, enabled: boolean): Promise<SkillSourceView>
+
+/**
+ * Replace which of a source's skills are installed. Selection applies to the
+ * synced generation without downloading it again.
+ * @param id - source id.
+ * @param skills - skill or directory names; `undefined` installs every discovered skill of a user
+ *   source and restores a default source's configured selection.
+ * @returns the updated source.
+ */
+async setSkills(id: string, skills: readonly string[] | undefined): Promise<SkillSourceView>
+
+/**
+ * List the skills a source's current generation offers and whether each is installed.
+ * @param id - source id.
+ * @returns offers in discovery order; empty before the first sync.
+ */
+offers(id: string): SkillSourceOffer[]
+
+/**
+ * Ask upstream for the newest commit without downloading it. GitHub sources
+ * compare commit SHAs; archive and file sources report no update until a sync
+ * downloads different bytes.
+ * @param id - source id.
+ * @returns the source with `sync.updateAvailable` and `sync.latest` refreshed.
+ */
+async checkUpdate(id: string): Promise<SkillSourceView>
+
+/**
+ * Download the source again and switch to the new generation when its commit changed.
+ * Concurrent calls for one source share one sync.
+ * @param id - source id.
+ * @returns the source after the sync settles; a failure is reported in `sync.error`.
+ */
+async sync(id: string): Promise<SkillSourceView>
+```
+
+Source: [`packages/skill/skill-sources/src/index.ts`](../../packages/skill/skill-sources/src/index.ts)
+
+<a id="skill-filesystem-events"></a>
+
+### `skill-filesystem/*` events
+
+<a id="skill-filesystemchanged--emit"></a>
+
+#### `skill-filesystem/changed` — emit
+
+A trusted Host writer, such as the Skills page editor, created, changed, or deleted a file that may be a skill. Providers whose roots contain the path invalidate the catalog without waiting for a watcher.
+
+```ts cordis-catalog
+/**
+ * A trusted Host writer, such as the Skills page editor, created,
+ * changed, or deleted a file that may be a skill. Providers whose roots
+ * contain the path invalidate the catalog without waiting for a watcher.
+ * @param path - absolute path of the changed file.
+ * @mode emit
+ */
+'skill-filesystem/changed'(path: string): void
+```
+
+Source: [`packages/skill/skill-filesystem/src/index.ts`](../../packages/skill/skill-filesystem/src/index.ts)
+
+<a id="skill-manager-events"></a>
+
+### `skill-manager/*` events
+
+<a id="skill-managerchanged--emit"></a>
+
+#### `skill-manager/changed` — emit
+
+The skill catalog, skill preferences, or skill sources changed; management clients refetch their current view.
+
+```ts cordis-catalog
+/**
+ * The skill catalog, skill preferences, or skill sources changed; management
+ * clients refetch their current view.
+ * @mode emit
+ */
+'skill-manager/changed'(): void
+```
+
+Source: [`packages/host/skill-manager/src/types.ts`](../../packages/host/skill-manager/src/types.ts)
+
+<a id="skill-preferences-events"></a>
+
+### `skill-preferences/*` events
+
+<a id="skill-preferenceschange--emit"></a>
+
+#### `skill-preferences/change` — emit
+
+Committed skill preferences changed, through this service or an external edit.
+
+```ts cordis-catalog
+/**
+ * Committed skill preferences changed, through this service or an external edit.
+ * @mode emit
+ */
+'skill-preferences/change'(): void
+```
+
+Source: [`packages/skill/skill-preferences/src/index.ts`](../../packages/skill/skill-preferences/src/index.ts)
+
+<a id="skill-sources-events"></a>
+
+### `skill-sources/*` events
+
+<a id="skill-sourceschange--emit"></a>
+
+#### `skill-sources/change` — emit
+
+The source list, a source's enablement, or a sync state changed.
+
+```ts cordis-catalog
+/**
+ * The source list, a source's enablement, or a sync state changed.
+ * @mode emit
+ */
+'skill-sources/change'(): void
+```
+
+Source: [`packages/skill/skill-sources/src/index.ts`](../../packages/skill/skill-sources/src/index.ts)
+
 <a id="skills-events"></a>
 
 ### `skills/*` events
@@ -335,12 +791,12 @@ Source: [`packages/skill/skill/src/index.ts`](../../packages/skill/skill/src/ind
 
 #### `skills/change` — emit
 
-A skill provider, runtime contribution, or provider-backed catalog may have changed. This is an unfiltered invalidation notification; consumers refetch the catalog for their own lookup options. Listener failures are contained and cannot veto the registry mutation.
+A skill provider, runtime contribution, enablement filter, or provider-backed catalog may have changed. This is an unfiltered invalidation notification; consumers refetch the catalog for their own lookup options. Listener failures are contained and cannot veto the registry mutation.
 
 ```ts cordis-catalog
 /**
- * A skill provider, runtime contribution, or provider-backed catalog may
- * have changed. This is an unfiltered invalidation notification; consumers
+ * A skill provider, runtime contribution, enablement filter, or
+ * provider-backed catalog may have changed. This is an unfiltered invalidation notification; consumers
  * refetch the catalog for their own lookup options. Listener failures are
  * contained and cannot veto the registry mutation.
  * @mode emit

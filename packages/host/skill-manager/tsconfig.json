@@ -1,0 +1,51 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib/types"
+  },
+  "include": [
+    "src"
+  ],
+  "references": [
+    {
+      "path": "../../../vendor/cordis"
+    },
+    {
+      "path": "../../core/scope"
+    },
+    {
+      "path": "../../preset/agent-preset-registry"
+    },
+    {
+      "path": "../../skill/skill"
+    },
+    {
+      "path": "../../skill/skill-preferences"
+    },
+    {
+      "path": "../../skill/skill-sources"
+    },
+    {
+      "path": "../../skill/skill-marketplace"
+    },
+    {
+      "path": "../../typert/protocol"
+    },
+    {
+      "path": "../../workspace/workspace"
+    },
+    {
+      "path": "../../../vendor/schemastery"
+    },
+    {
+      "path": "../../util/atomic-write"
+    },
+    {
+      "path": "../../util/home-paths"
+    },
+    {
+      "path": "../../skill/skill-filesystem"
+    }
+  ]
+}

@@ -1365,6 +1365,25 @@ export interface Config {
 
 来源： [`packages/host/product-telemetry-otel/src/index.ts:37`](../packages/host/product-telemetry-otel/src/index.ts)
 
+<a id="deepseek-aidsh-host-skill-manager"></a>
+
+## `@deepseek-ai/dsh-host-skill-manager`
+
+需要： `skills` · `typert`
+
+```ts config-catalog
+/** Skill manager configuration. */
+export interface Config {
+  /**
+   * DSH home whose `skills` directory holds user skills; omitted resolves
+   * `$DSH_HOME`, then `~/.dsh`. Match `dsh-skill-filesystem`'s `dshHome`.
+   */
+  readonly dshHome?: string
+}
+```
+
+来源： [`packages/host/skill-manager/src/index.ts:46`](../packages/host/skill-manager/src/index.ts)
+
 <a id="deepseek-aidsh-host-webserver"></a>
 
 ## `@deepseek-ai/dsh-host-webserver`
@@ -2737,7 +2756,7 @@ export interface Config {
 }
 ```
 
-来源： [`packages/skill/skill/src/index.ts:278`](../packages/skill/skill/src/index.ts)
+来源： [`packages/skill/skill/src/index.ts:321`](../packages/skill/skill/src/index.ts)
 
 <a id="deepseek-aidsh-skill-filesystem"></a>
 
@@ -2777,6 +2796,69 @@ export interface Config {
 
 来源： [`packages/skill/skill-filesystem/src/index.ts:49`](../packages/skill/skill-filesystem/src/index.ts)
 
+<a id="deepseek-aidsh-skill-marketplace"></a>
+
+## `@deepseek-ai/dsh-skill-marketplace`
+
+```ts config-catalog
+/** Skill marketplace configuration. */
+export interface Config {
+  /** Marketplaces in display order. */
+  readonly marketplaces?: readonly MarketplaceConfig[]
+  /** Results per page of one marketplace when a search names no limit. */
+  readonly pageSize?: number
+  /** Results per marketplace when a search spans every marketplace and names no limit. */
+  readonly mixedPageSize?: number
+  /** Largest page a search may request. */
+  readonly maxPageSize?: number
+  /** How long a response stays cached, in milliseconds. */
+  readonly cacheTtlMs?: number
+  /** Per-request timeout in milliseconds. */
+  readonly fetchTimeoutMs?: number
+  /** Largest accepted response body in bytes. */
+  readonly maxResponseBytes?: number
+  /** Most skill directories listed from one `github` marketplace. */
+  readonly maxRepositorySkills?: number
+  /** Deepest directory level scanned for `SKILL.md` in a `github` marketplace. */
+  readonly maxDiscoveryDepth?: number
+  /** Parallel `SKILL.md` downloads when a page of a `github` marketplace loads descriptions. */
+  readonly scanConcurrency?: number
+  /** GitHub REST API base URL. */
+  readonly githubApiUrl?: string
+  /** Base URL serving raw repository files. */
+  readonly githubRawUrl?: string
+  /** Credential reference holding a GitHub token for API rate limits. */
+  readonly githubTokenRef?: string
+  /** Permit plain HTTP to loopback hosts, for test fixtures. */
+  readonly allowHttpLoopback?: boolean
+}
+
+/** One configured marketplace. */
+export interface MarketplaceConfig {
+  /** Stable lowercase hyphenated id. */
+  readonly id: string
+  /** Display name. */
+  readonly title: string
+  /** How the marketplace is queried. */
+  readonly kind: MarketplaceKind
+  /** API base URL, or the repository URL for `github`. */
+  readonly url: string
+  /** Whether searches include the marketplace. */
+  readonly enabled?: boolean
+}
+
+/**
+ * How a marketplace is queried:
+ * - `github`: one repository scanned for `SKILL.md` files; browsable without a query.
+ * - `claude-plugins-dev`: the claude-plugins.dev skills API; browsable without a query.
+ * - `skillsmp`: the SkillsMP search API; needs a query.
+ * - `skills-sh`: the skills.sh search API; needs a query of at least two characters.
+ */
+export type MarketplaceKind = 'github' | 'claude-plugins-dev' | 'skillsmp' | 'skills-sh'
+```
+
+来源： [`packages/skill/skill-marketplace/src/index.ts:54`](../packages/skill/skill-marketplace/src/index.ts)
+
 <a id="deepseek-aidsh-skill-office"></a>
 
 ## `@deepseek-ai/dsh-skill-office`
@@ -2792,6 +2874,82 @@ export interface Config {
 ```
 
 来源： [`packages/skill/skill-office/src/index.ts:15`](../packages/skill/skill-office/src/index.ts)
+
+<a id="deepseek-aidsh-skill-preferences"></a>
+
+## `@deepseek-ai/dsh-skill-preferences`
+
+需要： `skills`
+
+```ts config-catalog
+/** Skill preferences configuration. */
+export interface Config {
+  /** Preferences file; omitted resolves to `<dshHome>/skill-preferences.json`. */
+  readonly file?: string
+  /** DSH home used when `file` is omitted; omitted resolves `$DSH_HOME`, then `~/.dsh`. */
+  readonly dshHome?: string
+  /** Reload the file when another process or editor changes it. */
+  readonly watch?: boolean
+}
+```
+
+来源： [`packages/skill/skill-preferences/src/index.ts:74`](../packages/skill/skill-preferences/src/index.ts)
+
+<a id="deepseek-aidsh-skill-sources"></a>
+
+## `@deepseek-ai/dsh-skill-sources`
+
+需要： `skills`
+
+```ts config-catalog
+/** Skill sources configuration. */
+export interface Config {
+  /** Sources every user starts with; users may disable or remove them. */
+  readonly defaultSources?: readonly SkillSourceConfig[]
+  /** DSH home holding the source list and synced files; omitted resolves `$DSH_HOME`, then `~/.dsh`. */
+  readonly dshHome?: string
+  /** Precedence rank of remote skills; lower wins a duplicate name within one registry layer. */
+  readonly rank?: number
+  /** Sync enabled sources that have never synced when the plugin starts. */
+  readonly autoSyncOnStart?: boolean
+  /** Largest downloaded archive or file in bytes. */
+  readonly maxDownloadBytes?: number
+  /** Largest total extracted size in bytes. */
+  readonly maxExtractedBytes?: number
+  /** Largest number of extracted files per source. */
+  readonly maxFiles?: number
+  /** Largest `SKILL.md` accepted in bytes. */
+  readonly maxSkillBytes?: number
+  /** Deepest directory level searched for `SKILL.md`. */
+  readonly maxDiscoveryDepth?: number
+  /** Per-request timeout in milliseconds. */
+  readonly fetchTimeoutMs?: number
+  /** GitHub REST API base URL. */
+  readonly githubApiUrl?: string
+  /** Credential reference holding a GitHub token for rate limits and private repositories. */
+  readonly githubTokenRef?: string
+  /** Permit plain HTTP to loopback hosts, for local mirrors and test fixtures. */
+  readonly allowHttpLoopback?: boolean
+}
+
+/** One configured source. */
+export interface SkillSourceConfig {
+  /** Stable lowercase hyphenated id; also the `remote:<id>` skill source label. */
+  readonly id: string
+  /** GitHub repository URL, `github:owner/repo`, `.zip` archive URL, or `.md` skill file URL. */
+  readonly url: string
+  /** Git ref for GitHub sources. */
+  readonly ref?: string
+  /** Subdirectory that bounds discovery. */
+  readonly path?: string
+  /** Skill names or directory names to install; omitted installs every discovered skill. */
+  readonly skills?: readonly string[]
+  /** Whether the source contributes skills. */
+  readonly enabled?: boolean
+}
+```
+
+来源： [`packages/skill/skill-sources/src/index.ts:54`](../packages/skill/skill-sources/src/index.ts)
 
 <a id="deepseek-aidsh-spill-local"></a>
 
@@ -3854,7 +4012,7 @@ export interface Config {
 export type ToolPresentationMode = 'native' | 'ptc' | 'both'
 ```
 
-来源： [`packages/core/tools/src/index.ts:663`](../packages/core/tools/src/index.ts)
+来源： [`packages/core/tools/src/index.ts:673`](../packages/core/tools/src/index.ts)
 
 <a id="deepseek-aidsh-typert-loader"></a>
 
@@ -4124,7 +4282,7 @@ export interface Config {
 }
 ```
 
-来源： [`packages/deliverables/workspace-changes/src/index.ts:36`](../packages/deliverables/workspace-changes/src/index.ts)
+来源： [`packages/deliverables/workspace-changes/src/index.ts:33`](../packages/deliverables/workspace-changes/src/index.ts)
 
 ## 无配置的可加载插件
 
@@ -4178,6 +4336,7 @@ export interface Config {
 - `@deepseek-ai/dsh-client-ui-sidebar-right`（[`packages/client/ui-sidebar-right/src/index.ts`](../packages/client/ui-sidebar-right/src/index.ts)）
 - `@deepseek-ai/dsh-client-ui-sidebar-terminal`（[`packages/client/ui-sidebar-terminal/src/index.ts`](../packages/client/ui-sidebar-terminal/src/index.ts)）
 - `@deepseek-ai/dsh-client-ui-skill`（[`packages/client/ui-skill/src/index.ts`](../packages/client/ui-skill/src/index.ts)）
+- `@deepseek-ai/dsh-client-ui-skill-library`（[`packages/client/ui-skill-library/src/index.ts`](../packages/client/ui-skill-library/src/index.ts)）
 - `@deepseek-ai/dsh-client-ui-subagent`（[`packages/client/ui-subagent/src/index.ts`](../packages/client/ui-subagent/src/index.ts)）
 - `@deepseek-ai/dsh-client-ui-tool`（[`packages/client/ui-tool/src/index.ts`](../packages/client/ui-tool/src/index.ts)）
 - `@deepseek-ai/dsh-client-ui-trajectory`（[`packages/client/ui-trajectory/src/index.ts`](../packages/client/ui-trajectory/src/index.ts)）
@@ -4222,6 +4381,7 @@ export interface Config {
 - `@deepseek-ai/dsh-tool-ask-user` — 需要 `tools` · `userInteraction`（[`packages/interaction/tool-ask-user/src/index.ts`](../packages/interaction/tool-ask-user/src/index.ts)）
 - `@deepseek-ai/dsh-tool-call-timeout-policy` — 需要 `tools`（[`packages/guard/timeout-policy/src/index.ts`](../packages/guard/timeout-policy/src/index.ts)）
 - `@deepseek-ai/dsh-tool-cordis` — 需要 `tools` · `systemPrompt` · `cordisInspect`（[`packages/extensions/tool-cordis/src/index.ts`](../packages/extensions/tool-cordis/src/index.ts)）
+- `@deepseek-ai/dsh-tool-skill-manage` — 需要 `skills` · `tools`（[`packages/skill/tool-skill-manage/src/index.ts`](../packages/skill/tool-skill-manage/src/index.ts)）
 - `@deepseek-ai/dsh-tool-subagent-control` — 需要 `tools` · `subagents`（[`packages/subagent/tool-subagent-control/src/index.ts`](../packages/subagent/tool-subagent-control/src/index.ts)）
 - `@deepseek-ai/dsh-user-questions`（[`packages/interaction/user-questions/src/index.ts`](../packages/interaction/user-questions/src/index.ts)）
 - `@deepseek-ai/dsh-webhook` — 需要 `agents` · `agentDefaultModel` · `agentPresets` · `permissionPresets` · `sessionTitle` · `workspaceRegistry`（[`packages/webhook/webhook/src/index.ts`](../packages/webhook/webhook/src/index.ts)）

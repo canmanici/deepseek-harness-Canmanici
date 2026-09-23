@@ -19,7 +19,8 @@
  * snapshot locally, so one session costs one RPC. The scope-birth warm hook
  * prewarms the session's key; a preset switch drops that one key (the
  * catalog is the preset's, and a blank session may switch after the warm);
- * connection/reset clears everything — the host
+ * a skill-manager change (a Settings toggle, source sync, or file edit) and
+ * connection/reset clear everything — the host
  * catalog may differ across generations. A shared in-flight fetch
  * deliberately outlives any single menu interaction: closing the menu must
  * not kill the prewarm other consumers will hit, so it carries its own
@@ -36,6 +37,8 @@ import type {} from '@deepseek-ai/dsh-client-ui-sidebar-right/client'
 import type { Context as ClientContext } from '@deepseek-ai/cordis'
 import type { SkillEntry } from '@deepseek-ai/dsh-api-remotes/client'
 import type {} from '@deepseek-ai/dsh-api-session-controller/client'
+// Type-only: the forwarded `skill-manager/changed` event declaration.
+import type {} from '@deepseek-ai/dsh-host-skill-manager/types'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type { InputTriggerServiceContract, InputTriggerSource } from '@deepseek-ai/dsh-client-ui-input-trigger/client'
 import { fileAddressFor } from '@deepseek-ai/dsh-util-workspace-path'
@@ -228,6 +231,8 @@ export function apply(ctx: ClientContext): void {
   // A preset decides which skill providers an agent reads, so a switched
   // session's cached catalog belongs to the composition it no longer runs.
   ctx.remote.$on('agent-preset/selected', invalidate)
+  // Enablement, sources, and skill files change every session's catalog.
+  ctx.remote.$on('skill-manager/changed', clearAll)
   ctx.on('connection/reset', clearAll)
   ctx.effect(() => {
     const unregister = inputTriggers.registerSource(source)

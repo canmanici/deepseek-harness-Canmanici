@@ -767,6 +767,21 @@ describe('FileSystemSkillProvider', () => {
     expect((await ctx.skills.list()).map(skill => skill.name)).toEqual(['observed-skill'])
   })
 
+  it('invalidates on skill-filesystem/changed from a trusted Host writer, only for paths under its roots', async () => {
+    const home = await tempDir('skill-writer-home')
+    const root = join(home, '.agents/skills')
+    const ctx = await setupLocal(home)
+    expect(await ctx.skills.list()).toEqual([])
+    let invalidations = 0
+    ctx.on('skills/change', () => { invalidations += 1 })
+    await writeSkill(root, 'written-skill', 'Written skill')
+    ctx.emit('skill-filesystem/changed', join(home, 'elsewhere.md'))
+    expect(invalidations).toBe(0)
+    ctx.emit('skill-filesystem/changed', join(root, 'written-skill/SKILL.md'))
+    expect(invalidations).toBe(1)
+    expect((await ctx.skills.list()).map(skill => skill.name)).toEqual(['written-skill'])
+  })
+
   it('bounds project watchers and re-observes an evicted project on its next lookup', async () => {
     const home = await tempDir('skill-watch-lru-home')
     const first = await tempDir('skill-watch-lru-first')

@@ -57,6 +57,7 @@ import * as ToolSchedule from '@deepseek-ai/dsh-schedule'
 import Lsp from '@deepseek-ai/dsh-lsp'
 import * as ToolLsp from '@deepseek-ai/dsh-tool-lsp'
 import * as ToolSkill from '@deepseek-ai/dsh-tool-skill'
+import * as ToolSkillManage from '@deepseek-ai/dsh-tool-skill-manage'
 import * as ToolSessionQuery from '@deepseek-ai/dsh-tool-session-query'
 import * as ToolJobs from '@deepseek-ai/dsh-tool-jobs'
 import BrowserUseRegistry from '@deepseek-ai/dsh-browser-use'
@@ -511,6 +512,18 @@ const TOOL_PACKAGES: ToolPackage[] = [
       })
       await ctx.plugin(ToolSkill)
     },
+  },
+  {
+    pkg: '@deepseek-ai/dsh-tool-skill-manage',
+    dir: 'tool-skill-manage',
+    source: 'packages/skill/tool-skill-manage/src/index.ts',
+    requires: ['ctx.tools', 'ctx.skills', 'ctx.skillPreferences for enable and disable'],
+    writes: ['tool/call', 'tool/result'],
+    async mount(ctx) {
+      await ctx.plugin(SkillRegistry)
+      await ctx.plugin(ToolSkillManage)
+    },
+    note: 'Enablement writes go through ctx.skillPreferences, the same preferences the Skills page writes; the skill catalog reflects them at the next step.',
   },
   {
     pkg: '@deepseek-ai/dsh-tool-session-query',

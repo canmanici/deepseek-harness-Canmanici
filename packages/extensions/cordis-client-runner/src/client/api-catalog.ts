@@ -804,6 +804,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export interface RemoteHostFacts {\n    readonly home: string | undefined;\n    readonly isLoopback: boolean;\n}',
   },
   {
+    name: 'RemoteResult',
+    declaration: 'export type RemoteResult<T> = {\n    readonly ok: true;\n    readonly value: T;\n} | {\n    readonly ok: false;\n    readonly error: {\n        readonly code: string;\n        readonly message: string;\n    };\n};',
+  },
+  {
     name: 'RemoteStream',
     declaration: 'export class RemoteStream<Item> implements AsyncIterable<RemoteStreamItem<Item>> {\n    constructor(private readonly connection: Pick<ConnectionHandle, \'generation\'>, private readonly options: RemoteStreamOptions<Item>);\n    get signal(): AbortSignal;\n    restart(): void;\n    dispose(): Promise<void>;\n    [Symbol.asyncIterator](): AsyncIterator<RemoteStreamItem<Item>>;\n}',
   },

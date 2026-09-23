@@ -1,0 +1,18 @@
+- id: skill-filesystem
+  config:
+    watch: false
+
+- id: skill-preferences
+  config:
+    watch: false
+
+- id: skill-sources
+  config:
+    autoSyncOnStart: false
+
+- id: session-telemetry-otel
+  disabled: true
+
+- insert:
+    - id: skill-manager
+      name: '@deepseek-ai/dsh-host-skill-manager'

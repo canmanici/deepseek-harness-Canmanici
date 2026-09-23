@@ -98,6 +98,35 @@
     - id: plugin-inventory
       name: '@deepseek-ai/dsh-host-plugin-inventory'
 
+    # Public skill marketplaces the Skills page searches: GitHub repositories
+    # scanned for SKILL.md files, and public skill search APIs. Each entry is
+    # only a location; the skills come from the network.
+    - id: skill-marketplace
+      name: '@deepseek-ai/dsh-skill-marketplace'
+      config:
+        marketplaces:
+          - { id: anthropic-skills, title: Anthropic Skills, kind: github, url: 'https://github.com/anthropics/skills' }
+          - { id: anthropic-knowledge-work, title: Anthropic Knowledge Work, kind: github, url: 'https://github.com/anthropics/knowledge-work-plugins' }
+          - { id: claude-plugins-official, title: Claude Plugins Official, kind: github, url: 'https://github.com/anthropics/claude-plugins-official' }
+          - { id: claude-code-plugins, title: Claude Code Plugins, kind: github, url: 'https://github.com/anthropics/claude-code' }
+          - { id: openai-skills, title: OpenAI Skills, kind: github, url: 'https://github.com/openai/skills' }
+          - { id: superpowers, title: Superpowers, kind: github, url: 'https://github.com/obra/superpowers' }
+          - { id: vercel-agent-skills, title: Vercel Agent Skills, kind: github, url: 'https://github.com/vercel-labs/agent-skills' }
+          - { id: huggingface-skills, title: Hugging Face Skills, kind: github, url: 'https://github.com/huggingface/skills' }
+          - { id: trail-of-bits-skills, title: Trail of Bits Skills, kind: github, url: 'https://github.com/trailofbits/skills' }
+          - { id: microsoft-skills, title: Microsoft Skills, kind: github, url: 'https://github.com/microsoft/skills' }
+          - { id: cloudflare-skills, title: Cloudflare Skills, kind: github, url: 'https://github.com/cloudflare/skills' }
+          - { id: awesome-copilot, title: Awesome Copilot, kind: github, url: 'https://github.com/github/awesome-copilot' }
+          - { id: composio-awesome-skills, title: Awesome Claude Skills, kind: github, url: 'https://github.com/ComposioHQ/awesome-claude-skills' }
+          - { id: claude-plugins-dev, title: claude-plugins.dev, kind: claude-plugins-dev, url: 'https://claude-plugins.dev' }
+          - { id: skillsmp, title: SkillsMP, kind: skillsmp, url: 'https://skillsmp.com' }
+          - { id: skills-sh, title: skills.sh, kind: skills-sh, url: 'https://skills.sh' }
+
+    # Skill inventory, per-skill enablement, skill authoring, remote sources,
+    # and marketplace installs for the Skills page, over the `skillManager` Remote.
+    - id: skill-manager
+      name: '@deepseek-ai/dsh-host-skill-manager'
+
     # Session commands, cold reads, and live control over Typert Remote.
     - id: session-controller
       name: '@deepseek-ai/dsh-api-session-controller'
@@ -279,6 +308,11 @@
     # bundles the sidebar page leaves out are inspected here.
     - id: ui-settings-plugin-inventory
       name: '@deepseek-ai/dsh-client-ui-settings-plugin-inventory'
+
+    # Skills page under Plugins in the sidebar: the skill library, per-skill
+    # switches, skill authoring, and remote sources.
+    - id: ui-skill-library
+      name: '@deepseek-ai/dsh-client-ui-skill-library'
 
     - id: ui-conversation
       name: '@deepseek-ai/dsh-client-ui-conversation'

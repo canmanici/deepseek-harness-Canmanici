@@ -274,6 +274,49 @@ export interface SkillProviderControl {
   readonly invalidate: () => void
 }
 
+/** Registration-scoped lifecycle and invalidation capability borrowed by one enablement filter. */
+export type SkillFilterControl = SkillProviderControl
+
+/**
+ * Predicate resolved for one lookup.
+ * @param skill - merged winning summary under consideration.
+ * @returns whether the skill stays listed and loadable.
+ */
+export type SkillEnablement = (skill: SkillSummary) => boolean
+
+/**
+ * Enablement policy the registry applies to merged winners before any read
+ * lists or loads them. A disabled winner is absent from every surface; a
+ * lower-ranked candidate with the same name does not take its place.
+ */
+export interface SkillFilter {
+  /** Unique filter name, reported as the reason in {@link SkillInventoryEntry.disabledBy}. */
+  readonly name: string
+  /**
+   * Resolve the predicate for one lookup. A rejection rejects the calling
+   * read, so a failing policy never exposes a skill it would disable.
+   * @param options - lookup options; `cwd` selects workspace-sensitive policy and `signal` cancels work.
+   * @returns the predicate applied to every merged winner of this lookup.
+   */
+  readonly resolve: (options: SkillLookupOptions) => Promise<SkillEnablement>
+}
+
+/** One merged winning skill plus the filters that currently disable it. */
+export interface SkillInventoryEntry extends SkillSummary {
+  /** Whether no registered filter disables this skill. */
+  readonly enabled: boolean
+  /** Names of the filters that disable this skill, in registration order. */
+  readonly disabledBy: readonly string[]
+}
+
+/** One unfiltered catalog observation for management surfaces. */
+export interface SkillInventorySnapshot {
+  /** Sorted merged winners, enabled or not. */
+  readonly skills: SkillInventoryEntry[]
+  /** Whether every registered provider completed without a concurrent catalog revision. */
+  readonly complete: boolean
+}
+
 /** Skill registry configuration. */
 export interface Config {
   /** Maximum number of completed cwd/provider catalogs kept in memory. */
@@ -287,8 +330,8 @@ declare module '@deepseek-ai/cordis' {
 
   interface Events {
     /**
-     * A skill provider, runtime contribution, or provider-backed catalog may
-     * have changed. This is an unfiltered invalidation notification; consumers
+     * A skill provider, runtime contribution, enablement filter, or
+     * provider-backed catalog may have changed. This is an unfiltered invalidation notification; consumers
      * refetch the catalog for their own lookup options. Listener failures are
      * contained and cannot veto the registry mutation.
      * @mode emit
@@ -364,6 +407,7 @@ export class SkillRegistry extends Service {
     () => { this.invalidateCache() },
   )
   private readonly collectCache = new Map<string, Map<string, IndexedCandidate>>()
+  private readonly filters = new NamedEntries<SkillFilter>(name => new Error(`a skill filter named "${name}" is already registered`))
   private revision = 0
   private nextProviderOrder = 0
   /** Stable identities for cache keys; scope keys are opaque identity-compared objects. */
@@ -460,7 +504,46 @@ export class SkillRegistry extends Service {
   }
 
   /**
-   * List invocation-neutral skill summaries for a workspace. Consumers apply
+   * Register a borrowed same-process enablement filter synchronously during
+   * plugin apply. Filters are host-wide: every scope's reads apply every
+   * registered filter. Registration, disposal, and the control's
+   * `invalidate()` emit `skills/change`.
+   * @param create - synchronous factory receiving this registration's lifecycle and invalidation control.
+   * @returns the exact Cordis effect disposer that unregisters this filter.
+   */
+  registerFilter(create: (control: SkillFilterControl) => SkillFilter): () => Promise<void> {
+    const lifecycle = new AbortController()
+    let filter: SkillFilter | undefined
+    let active = false
+    const control: SkillFilterControl = {
+      signal: lifecycle.signal,
+      invalidate: () => {
+        if (active && filter !== undefined && this.filters.get(filter.name) === filter) this.invalidateCache()
+      },
+    }
+    try {
+      const registered = create(control)
+      filter = registered
+      return this.ctx.effect(() => {
+        const undo = this.filters.insert(registered.name, registered)
+        active = true
+        this.invalidateCache()
+        return () => {
+          active = false
+          undo()
+          lifecycle.abort(new Error(`skill filter "${registered.name}" disposed`))
+          this.invalidateCache()
+        }
+      }, 'skills.registerFilter()')
+    } catch (error) {
+      lifecycle.abort(error)
+      throw error
+    }
+  }
+
+  /**
+   * List enabled invocation-neutral skill summaries for a workspace; merged
+   * winners disabled by a registered filter are omitted. Consumers apply
    * model or user invocation policy at their operational boundary. Lookup
    * options and provider candidates are readonly same-process values borrowed
    * throughout discovery.
@@ -472,17 +555,37 @@ export class SkillRegistry extends Service {
   }
 
   /**
-   * Observe the current invocation-neutral catalog and whether discovery completed within a stable revision.
-   * Incomplete observations are never cached, allowing consumers to retain last-good state and
-   * retry on their next request boundary.
+   * Observe the current enabled invocation-neutral catalog and whether discovery completed within a stable revision.
+   * Winners disabled by a registered filter are omitted. Incomplete observations are never cached, allowing
+   * consumers to retain last-good state and retry on their next request boundary.
    * @param options - view options; `scope` selects the viewing agent's layers, `cwd` selects project roots, and `signal` cancels discovery.
    * @returns sorted summaries plus discovery-completeness state.
    */
   async snapshot(options: SkillViewOptions = {}): Promise<SkillCatalogSnapshot> {
+    const inventory = await this.inventory(options)
+    return {
+      skills: inventory.skills.filter(entry => entry.enabled).map(toSummary),
+      complete: inventory.complete,
+    }
+  }
+
+  /**
+   * Observe every merged winner, including those disabled by filters, for
+   * management surfaces. Model and user catalogs read {@link snapshot} instead.
+   * @param options - view options; `scope` selects the viewing agent's layers,
+   *   `cwd` selects project roots and filter policy, and `signal` cancels discovery.
+   * @returns sorted winners with their enablement plus discovery-completeness state.
+   */
+  async inventory(options: SkillViewOptions = {}): Promise<SkillInventorySnapshot> {
     const collected = await this.collect(options)
+    const disabledBy = await this.resolveFilters(options)
     return {
       skills: [...collected.entries.values()]
-        .map(entry => toSummary(entry.candidate))
+        .map((entry) => {
+          const summary = toSummary(entry.candidate)
+          const reasons = disabledBy(summary)
+          return { ...summary, enabled: reasons.length === 0, disabledBy: reasons }
+        })
         .sort(compareSkillSummary),
       complete: collected.cacheable,
     }
@@ -490,7 +593,8 @@ export class SkillRegistry extends Service {
 
   /**
    * Load and validate the winning candidate, passing its opaque discovery locator back to the
-   * provider. Cancellation is rechecked after selection, including cache hits, and raced against
+   * provider. A winner disabled by a registered filter is not loaded. Cancellation is rechecked
+   * after selection, including cache hits, and raced against
    * loading so an uncooperative provider cannot hang the caller.
    * @param name - kebab-case skill name.
    * @param options - view options; `scope` selects the viewing agent's layers,
@@ -503,6 +607,8 @@ export class SkillRegistry extends Service {
     throwIfAborted(options.signal)
     const match = collected.entries.get(name)
     if (match === undefined) return undefined
+    const disabledBy = await this.resolveFilters(options)
+    if (disabledBy(toSummary(match.candidate)).length > 0) return undefined
     const definition = await waitWithAbort(
       match.provider.get(match.candidate, options),
       options.signal,
@@ -514,6 +620,16 @@ export class SkillRegistry extends Service {
       return undefined
     }
     return definition
+  }
+
+  /** Resolve every registered filter for one lookup into a function naming the filters that disable a skill. */
+  private async resolveFilters(options: SkillLookupOptions): Promise<(skill: SkillSummary) => string[]> {
+    const resolved: Array<{ name: string; isEnabled: SkillEnablement }> = []
+    for (const filter of [...this.filters.values()]) {
+      resolved.push({ name: filter.name, isEnabled: await waitWithAbort(filter.resolve(options), options.signal) })
+    }
+    throwIfAborted(options.signal)
+    return skill => resolved.filter(({ isEnabled }) => !isEnabled(skill)).map(({ name }) => name)
   }
 
   private async collect(options: SkillViewOptions): Promise<CollectResult> {
@@ -766,7 +882,7 @@ function validateDefinition(skill: SkillDefinition): void {
   if (path !== undefined && typeof path !== 'string') throw new TypeError(`loaded skill "${name}" path must be a string`)
 }
 
-function toSummary(skill: SkillDefinition | SkillCandidate): SkillSummary {
+function toSummary(skill: SkillSummary): SkillSummary {
   const { name, description, whenToUse, invocation, source, provider, resourceBase } = skill
   return {
     name,

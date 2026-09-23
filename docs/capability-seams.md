@@ -167,6 +167,15 @@ flowchart LR
   pkg_skill_badge["skill-badge"]
   pkg_skill_filesystem["skill-filesystem"]
   pkg_skill_office["skill-office"]
+  pkg_skill_preferences["skill-preferences"]
+  pkg_skill_sources["skill-sources"]
+  svc_skillPreferences["ctx.skillPreferences<br/>Skill enablement preferences"]
+  svc_skillSources["ctx.skillSources<br/>Remote skill sources"]
+  pkg_skill_marketplace["skill-marketplace"]
+  svc_skillMarketplace["ctx.skillMarketplace<br/>Public skill marketplaces"]
+  pkg_host_skill_manager["host-skill-manager"]
+  svc_skillManager["ctx.skillManager<br/>Skill management Remote"]
+  pkg_client_ui_skill_library["client-ui-skill-library"]
   svc_agents["ctx.agents<br/>Agent service"]
   pkg_acp["acp"]
   svc_agentDefaultModel["ctx.agentDefaultModel<br/>Default Agent model selection"]
@@ -332,6 +341,7 @@ flowchart LR
   pkg_host_directory_picker_browse --> svc_directoryPicker
   pkg_host_directory_picker_native --> svc_directoryPicker
   pkg_host_product_telemetry_otel --> svc_productTelemetry
+  pkg_host_skill_manager --> svc_skillManager
   pkg_host_webserver --> svc_webServer
   pkg_inspector --> svc_inspector
   pkg_invariants --> svc_invariants
@@ -378,7 +388,12 @@ flowchart LR
   pkg_skill --> svc_skills
   pkg_skill_badge --> svc_skills
   pkg_skill_filesystem --> svc_skills
+  pkg_skill_marketplace --> svc_skillMarketplace
   pkg_skill_office --> svc_skills
+  pkg_skill_preferences --> svc_skillPreferences
+  pkg_skill_preferences --> svc_skills
+  pkg_skill_sources --> svc_skillSources
+  pkg_skill_sources --> svc_skills
   pkg_spill --> svc_spillStore
   pkg_spill_local --> svc_spillStore
   pkg_ssh --> svc_ssh
@@ -513,6 +528,8 @@ flowchart LR
   svc_shell --> pkg_tool_pwsh
   svc_shellEnv --> pkg_tool_bash
   svc_shellEnv --> pkg_tool_pwsh
+  svc_skillManager --> pkg_client_ui_skill_library
+  svc_skillMarketplace --> pkg_host_skill_manager
   svc_skills --> pkg_tool_skill
   svc_speechToText --> pkg_experimental_api_speech_to_text
   svc_spillStore --> pkg_spill_policy
@@ -624,7 +641,11 @@ flowchart LR
 | `ctx.commands` | `core` | [`commands`](../packages/interaction/commands) | - | - | - | Plugins register direct human commands without sending invocations to the model. |
 | `ctx.sessionProjections` | `core` | [`session-projection`](../packages/session/session-projection) | - | [`api-session-controller`](../packages/api/session-controller), [`tool-todo`](../packages/todo/tool-todo), [`session-title`](../packages/session/session-title) | - | Domains register state-driven fold units; the eager drive keeps per-session watermark states and the Session controller serves baselines and pushes changed values. |
 | `ctx.sessionProjectionCache` | `core` | [`session-projection-cache`](../packages/session/session-projection-cache) | - | [`api-session-controller`](../packages/api/session-controller), [`session-query`](../packages/session-query/session-query), [`session-reference`](../packages/context/session-reference), [`subagent`](../packages/subagent/subagent) | - | Durably checkpoints projection unit states per session (throttled + turn/end/detach mandatory points) and serves the cold-read ladder: cache row + persistence tail replay, so listings never load full logs. |
-| `ctx.skills` | `seam` | [`skill`](../packages/skill/skill) | [`skill-badge`](../packages/skill/skill-badge), [`skill-filesystem`](../packages/skill/skill-filesystem), [`skill-office`](../packages/skill/skill-office) | [`tool-skill`](../packages/skill/tool-skill) | - | Merges provider skill catalogs; tool-skill renders the session-prefix catalog and loads complete skill bodies. |
+| `ctx.skills` | `seam` | [`skill`](../packages/skill/skill) | [`skill-badge`](../packages/skill/skill-badge), [`skill-filesystem`](../packages/skill/skill-filesystem), [`skill-office`](../packages/skill/skill-office), [`skill-preferences`](../packages/skill/skill-preferences), [`skill-sources`](../packages/skill/skill-sources) | [`tool-skill`](../packages/skill/tool-skill) | - | Merges provider skill catalogs; tool-skill renders the session-prefix catalog and loads complete skill bodies. |
+| `ctx.skillPreferences` | `core` | [`skill-preferences`](../packages/skill/skill-preferences) | - | - | - | Owns the global and per-project enablement file and enforces it as the ctx.skills filter. |
+| `ctx.skillSources` | `core` | [`skill-sources`](../packages/skill/skill-sources) | - | - | - | Owns the remote source list and synced generations and registers them as a ctx.skills provider. |
+| `ctx.skillMarketplace` | `core` | [`skill-marketplace`](../packages/skill/skill-marketplace) | - | [`host-skill-manager`](../packages/host/skill-manager) | - | Searches GitHub repositories and public skill search APIs and returns entries that skill sources install. |
+| `ctx.skillManager` | `core` | [`host-skill-manager`](../packages/host/skill-manager) | - | [`client-ui-skill-library`](../packages/client/ui-skill-library) | - | Projects skill inventory, preferences, marketplace searches, and sources for the Skills page and forwards their changes. |
 | `ctx.agents` | `core` | [`agent`](../packages/core/agent) | - | [`agent-loop`](../packages/core/agent-loop), [`acp`](../packages/acp/acp), [`subagent-in-process-driver`](../packages/subagent/subagent-in-process-driver) | - | Owns live Agent handles, the create/resume factory seam, and process-local initiator propagation. |
 | `ctx.agentDefaultModel` | `core` | [`agent-default-model`](../packages/core/agent-default-model) | - | [`api-session-controller`](../packages/api/session-controller), [`headless`](../packages/bundle/headless) | - | Reads the default ModelSelection from volatile Config and saves selections through the profile editor. |
 | `ctx.agentLoop` | `bundle` | [`agent-loop`](../packages/core/agent-loop) | - | [`base`](../packages/bundle/base), [`sdk-minimal`](../packages/bundle/sdk-minimal) | - | The one concrete loop plugin; extension packages depend on dsh-agent events and services, not on this package. |

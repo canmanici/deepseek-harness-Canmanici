@@ -2489,6 +2489,208 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
     ],
   },
   {
+    key: 'skillManager',
+    summary: 'Remote service behind the Skills settings page.',
+    description: 'Remote service behind the Skills settings page. Reads go through `ctx.skills.inventory()` in the default agent preset\'s scope, so the page lists the skills a new session sees; writes delegate to `ctx.skillPreferences` and `ctx.skillSources`, which own validation and persistence. Any catalog, preference, or source change is forwarded as `skill-manager/changed`.',
+    methods: [
+      {
+        signature: '@Remote async inventory(request: SkillInventoryRequest): Promise<SkillInventoryValue>',
+        description: 'Read every installed skill with its enablement for one view.',
+        parameters: [{ name: 'request', description: 'optional project root selecting per-project overrides and project skills.' }],
+        returns: 'sorted skills, workspace projects, and which management services are mounted.',
+        throws: ['RemoteError when the project root is not absolute.'],
+      },
+      {
+        signature: '@Remote async setEnabled(request: SetSkillEnabledRequest): Promise<void>',
+        description: 'Enable or disable one skill globally or for one project.',
+        parameters: [{ name: 'request', description: 'skill name, target enablement, and optional project root.' }],
+        throws: ['RemoteError when skill preferences are not mounted or the request is invalid.'],
+      },
+      {
+        signature: '@Remote async clearOverride(request: ClearSkillOverrideRequest): Promise<void>',
+        description: 'Remove one project override so the global preference applies.',
+        parameters: [{ name: 'request', description: 'skill name and project root.' }],
+        throws: ['RemoteError when skill preferences are not mounted or the request is invalid.'],
+      },
+      {
+        signature: '@Remote sources(): Promise<SkillSourcesValue>',
+        description: 'List remote skill sources with their sync status.',
+        parameters: [],
+        returns: 'every source; empty when remote sources are not mounted.',
+      },
+      {
+        signature: '@Remote async addSource(request: AddSkillSourceRequest): Promise<SkillSourceValue>',
+        description: 'Add a remote source and start its first sync.',
+        parameters: [{ name: 'request', description: 'URL with optional ref and subdirectory.' }],
+        returns: 'the added source.',
+        throws: ['RemoteError when sources are not mounted or the URL is unsupported.'],
+      },
+      {
+        signature: '@Remote async syncSource(request: SkillSourceRequest): Promise<SkillSourceValue>',
+        description: 'Download one source again.',
+        parameters: [{ name: 'request', description: 'source id.' }],
+        returns: 'the source after the sync settles; failures appear in `error`.',
+        throws: ['RemoteError when sources are not mounted or the id is unknown.'],
+      },
+      {
+        signature: '@Remote async setSourceEnabled(request: SetSkillSourceEnabledRequest): Promise<SkillSourceValue>',
+        description: 'Enable or disable one source\'s skills.',
+        parameters: [{ name: 'request', description: 'source id and target enablement.' }],
+        returns: 'the updated source.',
+        throws: ['RemoteError when sources are not mounted or the id is unknown.'],
+      },
+      {
+        signature: '@Remote async removeSource(request: SkillSourceRequest): Promise<void>',
+        description: 'Remove one source; a default source stays hidden afterwards.',
+        parameters: [{ name: 'request', description: 'source id.' }],
+        throws: ['RemoteError when sources are not mounted or the id is unknown.'],
+      },
+      {
+        signature: '@Remote async readSkill(request: SkillNameRequest): Promise<SkillDocumentValue>',
+        description: 'Read any installed skill\'s stored fields, for preview or, when editable, for editing.',
+        parameters: [{ name: 'request', description: 'skill name.' }],
+        returns: 'the stored fields, file path, and whether the page may change the skill.',
+        throws: ['RemoteError when the skill has no readable file.'],
+      },
+      {
+        signature: '@Remote async createSkill(request: SkillDraft): Promise<SkillDocumentValue>',
+        description: 'Create a skill in the user skills directory.',
+        parameters: [{ name: 'request', description: 'the new skill\'s fields.' }],
+        returns: 'the stored fields and file path.',
+        throws: ['RemoteError when the name is taken by any installed skill or the fields are invalid.'],
+      },
+      {
+        signature: '@Remote async updateSkill(request: SkillDraft): Promise<SkillDocumentValue>',
+        description: 'Replace a local skill\'s fields in place, keeping other frontmatter keys.',
+        parameters: [{ name: 'request', description: 'the skill\'s new fields; the name selects the skill.' }],
+        returns: 'the stored fields and file path.',
+        throws: ['RemoteError when the winning skill is not a local file or the fields are invalid.'],
+      },
+      {
+        signature: '@Remote async deleteSkill(request: SkillNameRequest): Promise<void>',
+        description: 'Delete a user skill\'s files. Deleting a customized copy restores the original.',
+        parameters: [{ name: 'request', description: 'skill name.' }],
+        throws: ['RemoteError when the skill is not a user skill.'],
+      },
+      {
+        signature: '@Remote async customizeSkill(request: SkillNameRequest): Promise<SkillDocumentValue>',
+        description: 'Copy a remote or bundled skill\'s directory into the user skills directory, where the copy outranks the original, so it can be edited. Deleting the copy restores the original.',
+        parameters: [{ name: 'request', description: 'skill name.' }],
+        returns: 'the copy\'s stored fields and path.',
+        throws: ['RemoteError when the skill is local already, has no file, or a user skill of that name exists.'],
+      },
+      {
+        signature: '@Remote async marketplaces(request: SkillMarketplacesRequest): Promise<SkillMarketplacesValue>',
+        description: 'List the marketplaces the Host searches.',
+        parameters: [{ name: 'request', description: '`refresh` asks browsable marketplaces for their skill counts first.' }],
+        returns: 'marketplaces in configuration order.',
+      },
+      {
+        signature: '@Remote async searchMarketplace(request: SearchMarketplaceRequest): Promise<SearchMarketplaceValue>',
+        description: 'Search public marketplaces and mark entries that are installed already.',
+        parameters: [{ name: 'request', description: 'query, optional marketplace, offset, and page size.' }],
+        returns: 'entries with install state, totals, and per-marketplace failures.',
+        throws: ['RemoteError when the marketplace service is not mounted or the marketplace id is unknown.'],
+      },
+      {
+        signature: '@Remote async installSkill(request: InstallSkillRequest): Promise<SkillSourceValue>',
+        description: 'Install one marketplace skill: add it to the selection of the source that already tracks its repository, or add a source for the repository that installs only this skill, then wait for the sync. A disabled source that installed every skill is narrowed to this skill before it is re-enabled.',
+        parameters: [{ name: 'request', description: 'repository, optional directory, and name.' }],
+        returns: 'the source that installs the skill.',
+        throws: ['RemoteError when sources are not mounted, the repository is invalid, or the synced repository contains no skill matching the request.'],
+      },
+      {
+        signature: '@Remote async uninstallSkill(request: SkillNameRequest): Promise<void>',
+        description: 'Uninstall one remote skill by removing it from its source\'s selection; a user source left with no skills is removed.',
+        parameters: [{ name: 'request', description: 'skill name.' }],
+        throws: ['RemoteError when the winning skill is not a remote skill.'],
+      },
+      {
+        signature: '@Remote async sourceSkills(request: SkillSourceRequest): Promise<SkillSourceSkillsValue>',
+        description: 'List the skills one source offers and which are installed.',
+        parameters: [{ name: 'request', description: 'source id.' }],
+        returns: 'offers in discovery order.',
+        throws: ['RemoteError when sources are not mounted or the id is unknown.'],
+      },
+      {
+        signature: '@Remote async setSourceSkills(request: SetSkillSourceSkillsRequest): Promise<SkillSourceValue>',
+        description: 'Replace which of a source\'s skills are installed.',
+        parameters: [{ name: 'request', description: 'source id and selection; omitted installs every skill.' }],
+        returns: 'the updated source.',
+        throws: ['RemoteError when sources are not mounted or the id is unknown.'],
+      },
+      {
+        signature: '@Remote async checkUpdates(): Promise<SkillSourcesValue>',
+        description: 'Ask upstream whether each GitHub source has a newer commit.',
+        parameters: [],
+        returns: 'every source with refreshed update flags.',
+      },
+    ],
+  },
+  {
+    key: 'skillMarketplace',
+    summary: 'Searches public skill marketplaces.',
+    description: 'Searches public skill marketplaces. Responses are cached per URL for `cacheTtlMs`; a failed marketplace is reported beside the others\' results instead of failing the search.',
+    methods: [
+      {
+        signature: 'list(): MarketplaceView[]',
+        description: 'List marketplaces with the counts the latest refreshCounts found.',
+        parameters: [],
+        returns: 'marketplaces in configuration order.',
+      },
+      {
+        signature: 'async refreshCounts(): Promise<MarketplaceView[]>',
+        description: 'Ask every enabled browsable marketplace how many skills it offers.',
+        parameters: [],
+        returns: 'the refreshed list.',
+      },
+      {
+        signature: 'async search(request: MarketplaceSearchRequest): Promise<MarketplaceSearchResult>',
+        description: 'Search one or every enabled marketplace.',
+        parameters: [{ name: 'request', description: 'query, optional marketplace, offset, and page size.' }],
+        returns: 'merged entries, totals, and per-marketplace failures.',
+        throws: ['Error when `marketplace` names an unknown or disabled marketplace.'],
+      },
+    ],
+  },
+  {
+    key: 'skillPreferences',
+    summary: 'Persistent global and per-project skill enablement, enforced as a `ctx.skills` filter.',
+    description: 'Persistent global and per-project skill enablement, enforced as a `ctx.skills` filter. Mutations serialize through a cross-process file lock, commit with an atomic rename, and only then update the in-memory state and invalidate the skill catalog.',
+    methods: [
+      {
+        signature: 'state(): SkillPreferencesState',
+        description: 'Read the committed preferences.',
+        parameters: [],
+        returns: 'the current state; callers must not mutate it.',
+      },
+      {
+        signature: 'async projectRootOf(cwd: string): Promise<string>',
+        description: 'Resolve the project root a cwd keys on, matching project skill discovery.',
+        parameters: [{ name: 'cwd', description: 'workspace directory.' }],
+        returns: 'the absolute project root.',
+      },
+      {
+        signature: 'decide(name: string, projectRoot?: string): SkillEnablementDecision',
+        description: 'Explain one skill\'s enablement.',
+        parameters: [{ name: 'name', description: 'kebab-case skill name.' }, { name: 'projectRoot', description: 'absolute project root; omitted reads the global level only.' }],
+        returns: 'the enablement and the level that decided it.',
+      },
+      {
+        signature: 'async setEnabled(request: SetSkillEnabledRequest): Promise<SkillPreferencesState>',
+        description: 'Enable or disable one skill globally or for one project. A project change records an override only when it differs from the global preference and removes a redundant one.',
+        parameters: [{ name: 'request', description: 'skill name, target enablement, and optional project root.' }],
+        returns: 'the committed state.',
+      },
+      {
+        signature: 'async clearOverride(request: ClearSkillOverrideRequest): Promise<SkillPreferencesState>',
+        description: 'Remove one project override so the global preference applies.',
+        parameters: [{ name: 'request', description: 'skill name and project root.' }],
+        returns: 'the committed state.',
+      },
+    ],
+  },
+  {
     key: 'skills',
     summary: 'Layered registry of skill providers, the host+per-scope shape the tools registry established.',
     description: 'Layered registry of skill providers, the host+per-scope shape the tools registry established. A registration files into the layer of its calling context\'s scope (scopeOf): host rows and repository plugins land in the global layer, while a plugin mounted by an agent preset\'s standing composition lands in that preset\'s layer. A read merges the global layer with the viewing scope\'s chain — the nearest layer\'s entry wins a duplicate name outright, and the rank order decides duplicates only within one layer. It exposes sorted invocation-neutral summaries and loads full skill bodies on demand.',
@@ -2506,22 +2708,89 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         returns: 'the exact Cordis effect disposer, preserving composite teardown order and invalidating caches.',
       },
       {
+        signature: 'registerFilter(create: (control: SkillFilterControl) => SkillFilter): () => Promise<void>',
+        description: 'Register a borrowed same-process enablement filter synchronously during plugin apply. Filters are host-wide: every scope\'s reads apply every registered filter. Registration, disposal, and the control\'s `invalidate()` emit `skills/change`.',
+        parameters: [{ name: 'create', description: 'synchronous factory receiving this registration\'s lifecycle and invalidation control.' }],
+        returns: 'the exact Cordis effect disposer that unregisters this filter.',
+      },
+      {
         signature: 'async list(options: SkillViewOptions = {}): Promise<SkillSummary[]>',
-        description: 'List invocation-neutral skill summaries for a workspace. Consumers apply model or user invocation policy at their operational boundary. Lookup options and provider candidates are readonly same-process values borrowed throughout discovery.',
+        description: 'List enabled invocation-neutral skill summaries for a workspace; merged winners disabled by a registered filter are omitted. Consumers apply model or user invocation policy at their operational boundary. Lookup options and provider candidates are readonly same-process values borrowed throughout discovery.',
         parameters: [{ name: 'options', description: 'view options; `scope` selects the viewing agent\'s layers, `cwd` selects project roots, and `signal` cancels discovery.' }],
         returns: 'all sorted winning summaries.',
       },
       {
         signature: 'async snapshot(options: SkillViewOptions = {}): Promise<SkillCatalogSnapshot>',
-        description: 'Observe the current invocation-neutral catalog and whether discovery completed within a stable revision. Incomplete observations are never cached, allowing consumers to retain last-good state and retry on their next request boundary.',
+        description: 'Observe the current enabled invocation-neutral catalog and whether discovery completed within a stable revision. Winners disabled by a registered filter are omitted. Incomplete observations are never cached, allowing consumers to retain last-good state and retry on their next request boundary.',
         parameters: [{ name: 'options', description: 'view options; `scope` selects the viewing agent\'s layers, `cwd` selects project roots, and `signal` cancels discovery.' }],
         returns: 'sorted summaries plus discovery-completeness state.',
       },
       {
+        signature: 'async inventory(options: SkillViewOptions = {}): Promise<SkillInventorySnapshot>',
+        description: 'Observe every merged winner, including those disabled by filters, for management surfaces. Model and user catalogs read snapshot instead.',
+        parameters: [{ name: 'options', description: 'view options; `scope` selects the viewing agent\'s layers, `cwd` selects project roots and filter policy, and `signal` cancels discovery.' }],
+        returns: 'sorted winners with their enablement plus discovery-completeness state.',
+      },
+      {
         signature: 'async get(name: string, options: SkillViewOptions = {}): Promise<SkillDefinition | undefined>',
-        description: 'Load and validate the winning candidate, passing its opaque discovery locator back to the provider. Cancellation is rechecked after selection, including cache hits, and raced against loading so an uncooperative provider cannot hang the caller.',
+        description: 'Load and validate the winning candidate, passing its opaque discovery locator back to the provider. A winner disabled by a registered filter is not loaded. Cancellation is rechecked after selection, including cache hits, and raced against loading so an uncooperative provider cannot hang the caller.',
         parameters: [{ name: 'name', description: 'kebab-case skill name.' }, { name: 'options', description: 'view options; `scope` selects the viewing agent\'s layers, `cwd` selects workspace-sensitive skills, and `signal` cancels work.' }],
         returns: 'the full skill, including body content, or `undefined`.',
+      },
+    ],
+  },
+  {
+    key: 'skillSources',
+    summary: 'Remote skill sources synced to disk and exposed as a `ctx.skills` provider.',
+    description: 'Remote skill sources synced to disk and exposed as a `ctx.skills` provider. Source-list mutations serialize through a cross-process file lock and commit atomically; a sync replaces a source\'s generation only after extraction and discovery succeed, so a failed sync keeps the previous skills.',
+    methods: [
+      {
+        signature: 'list(): SkillSourceView[]',
+        description: 'List every source with its sync status.',
+        parameters: [],
+        returns: 'sources in configuration order, then user sources in insertion order.',
+      },
+      {
+        signature: 'async add(request: AddSkillSourceRequest): Promise<SkillSourceView>',
+        description: 'Add a user source and start its first sync.',
+        parameters: [{ name: 'request', description: 'URL, optional ref, subdirectory, and id.' }],
+        returns: 'the added source, in the `syncing` state.',
+        throws: ['Error when the URL is unsupported or the id is taken.'],
+      },
+      {
+        signature: 'async remove(id: string): Promise<void>',
+        description: 'Remove a source and its synced files. A default source is hidden rather than deleted, so configuration does not bring it back.',
+        parameters: [{ name: 'id', description: 'source id.' }],
+      },
+      {
+        signature: 'async setEnabled(id: string, enabled: boolean): Promise<SkillSourceView>',
+        description: 'Enable or disable a source\'s skills without deleting synced files.',
+        parameters: [{ name: 'id', description: 'source id.' }, { name: 'enabled', description: 'target enablement.' }],
+        returns: 'the updated source.',
+      },
+      {
+        signature: 'async setSkills(id: string, skills: readonly string[] | undefined): Promise<SkillSourceView>',
+        description: 'Replace which of a source\'s skills are installed. Selection applies to the synced generation without downloading it again.',
+        parameters: [{ name: 'id', description: 'source id.' }, { name: 'skills', description: 'skill or directory names; `undefined` installs every discovered skill of a user source and restores a default source\'s configured selection.' }],
+        returns: 'the updated source.',
+      },
+      {
+        signature: 'offers(id: string): SkillSourceOffer[]',
+        description: 'List the skills a source\'s current generation offers and whether each is installed.',
+        parameters: [{ name: 'id', description: 'source id.' }],
+        returns: 'offers in discovery order; empty before the first sync.',
+      },
+      {
+        signature: 'async checkUpdate(id: string): Promise<SkillSourceView>',
+        description: 'Ask upstream for the newest commit without downloading it. GitHub sources compare commit SHAs; archive and file sources report no update until a sync downloads different bytes.',
+        parameters: [{ name: 'id', description: 'source id.' }],
+        returns: 'the source with `sync.updateAvailable` and `sync.latest` refreshed.',
+      },
+      {
+        signature: 'async sync(id: string): Promise<SkillSourceView>',
+        description: 'Download the source again and switch to the new generation when its commit changed. Concurrent calls for one source share one sync.',
+        parameters: [{ name: 'id', description: 'source id.' }],
+        returns: 'the source after the sync settles; a failure is reported in `sync.error`.',
       },
     ],
   },
@@ -4034,11 +4303,43 @@ export const EVENT_API: readonly EventApiEntry[] = [
     parameters: [{ name: 'ns', description: 'Profile entry id.' }, { name: 'revision', description: 'The entry\'s new revision.' }],
   },
   {
+    name: 'skill-filesystem/changed',
+    mode: 'emit',
+    signature: '\'skill-filesystem/changed\'(path: string): void',
+    summary: 'A trusted Host writer, such as the Skills page editor, created, changed, or deleted a file that may be a skill.',
+    description: 'A trusted Host writer, such as the Skills page editor, created, changed, or deleted a file that may be a skill. Providers whose roots contain the path invalidate the catalog without waiting for a watcher.',
+    parameters: [{ name: 'path', description: 'absolute path of the changed file.' }],
+  },
+  {
+    name: 'skill-manager/changed',
+    mode: 'emit',
+    signature: '\'skill-manager/changed\'(): void',
+    summary: 'The skill catalog, skill preferences, or skill sources changed; management clients refetch their current view.',
+    description: 'The skill catalog, skill preferences, or skill sources changed; management clients refetch their current view.',
+    parameters: [],
+  },
+  {
+    name: 'skill-preferences/change',
+    mode: 'emit',
+    signature: '\'skill-preferences/change\'(): void',
+    summary: 'Committed skill preferences changed, through this service or an external edit.',
+    description: 'Committed skill preferences changed, through this service or an external edit.',
+    parameters: [],
+  },
+  {
+    name: 'skill-sources/change',
+    mode: 'emit',
+    signature: '\'skill-sources/change\'(): void',
+    summary: 'The source list, a source\'s enablement, or a sync state changed.',
+    description: 'The source list, a source\'s enablement, or a sync state changed.',
+    parameters: [],
+  },
+  {
     name: 'skills/change',
     mode: 'emit',
     signature: '\'skills/change\'(): void',
-    summary: 'A skill provider, runtime contribution, or provider-backed catalog may have changed.',
-    description: 'A skill provider, runtime contribution, or provider-backed catalog may have changed. This is an unfiltered invalidation notification; consumers refetch the catalog for their own lookup options. Listener failures are contained and cannot veto the registry mutation.',
+    summary: 'A skill provider, runtime contribution, enablement filter, or provider-backed catalog may have changed.',
+    description: 'A skill provider, runtime contribution, enablement filter, or provider-backed catalog may have changed. This is an unfiltered invalidation notification; consumers refetch the catalog for their own lookup options. Listener failures are contained and cannot veto the registry mutation.',
     parameters: [],
   },
   {
@@ -4336,6 +4637,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'ArchiveSessionOptions',
     declaration: 'export interface ArchiveSessionOptions {\n    readonly stopActivity?: boolean;\n}',
+  },
+  {
+    name: 'ArchiveSourceSpec',
+    declaration: 'export interface ArchiveSourceSpec {\n    readonly kind: \'archive\';\n    readonly url: string;\n    readonly path?: string;\n}',
   },
   {
     name: 'AskUserQuestionAnswer',
@@ -5018,6 +5323,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export interface GenericResultView {\n    card: \'generic\';\n    title?: string;\n    content?: ContentBlock[];\n}',
   },
   {
+    name: 'GitHubSourceSpec',
+    declaration: 'export interface GitHubSourceSpec {\n    readonly kind: \'github\';\n    readonly owner: string;\n    readonly repo: string;\n    readonly ref?: string;\n    readonly path?: string;\n}',
+  },
+  {
     name: 'GoalActivation',
     declaration: 'export type GoalActivation = \'armed\' | \'disarmed\';',
   },
@@ -5124,6 +5433,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'InstallBundleOptions',
     declaration: 'export interface InstallBundleOptions {\n    enabled?: boolean;\n    requestId?: PluginInstallRequestId;\n    approvedBuilds?: string[];\n    registry?: Registry;\n}',
+  },
+  {
+    name: 'InstallSkillRequest',
+    declaration: 'export interface InstallSkillRequest {\n    readonly repository: string;\n    readonly dir?: string;\n    readonly name: string;\n}',
   },
   {
     name: 'InstallSpecKind',
@@ -5406,12 +5719,68 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export interface LspRange {\n    readonly start: LspPosition;\n    readonly end: LspPosition;\n}',
   },
   {
+    name: 'ManagedMarketplace',
+    declaration: 'export interface ManagedMarketplace {\n    readonly id: string;\n    readonly title: string;\n    readonly kind: ManagedMarketplaceKind;\n    readonly url: string;\n    readonly enabled: boolean;\n    readonly browsable: boolean;\n    readonly available?: number;\n    readonly error?: string;\n}',
+  },
+  {
+    name: 'ManagedMarketplaceKind',
+    declaration: 'export type ManagedMarketplaceKind = \'github\' | \'claude-plugins-dev\' | \'skillsmp\' | \'skills-sh\';',
+  },
+  {
+    name: 'ManagedProject',
+    declaration: 'export interface ManagedProject {\n    readonly root: string;\n    readonly title: string;\n}',
+  },
+  {
+    name: 'ManagedSkill',
+    declaration: 'export interface ManagedSkill {\n    readonly name: string;\n    readonly description: string;\n    readonly whenToUse?: string;\n    readonly source: string;\n    readonly provider: string;\n    readonly path?: string;\n    readonly modelInvocable: boolean;\n    readonly userInvocable: boolean;\n    readonly enabled: boolean;\n    readonly preference: SkillPreferenceOrigin;\n    readonly editable: boolean;\n    readonly deletable: boolean;\n    readonly customizable: boolean;\n    readonly uninstallable: boolean;\n}',
+  },
+  {
+    name: 'ManagedSource',
+    declaration: 'export interface ManagedSource {\n    readonly id: string;\n    readonly url: string;\n    readonly ref?: string;\n    readonly path?: string;\n    readonly enabled: boolean;\n    readonly origin: \'default\' | \'user\';\n    readonly kind: \'github\' | \'archive\' | \'skill-file\';\n    readonly syncState: ManagedSourceSyncState;\n    readonly commit?: string;\n    readonly syncedAt?: string;\n    readonly error?: string;\n    readonly skills?: readonly string[];\n    readonly skillCount: number;\n    readonly availableCount: number;\n    readonly updateAvailable: boolean;\n    readonly latest?: string;\n    readonly checkedAt?: string;\n}',
+  },
+  {
+    name: 'ManagedSourceSkill',
+    declaration: 'export interface ManagedSourceSkill {\n    readonly name: string;\n    readonly description: string;\n    readonly dir: string;\n    readonly installed: boolean;\n}',
+  },
+  {
+    name: 'ManagedSourceSyncState',
+    declaration: 'export type ManagedSourceSyncState = \'never\' | \'syncing\' | \'ok\' | \'error\';',
+  },
+  {
     name: 'ManagementError',
     declaration: 'export interface ManagementError {\n    code: ReadOnlyReason | \'unknown-plugin\' | \'invalid-spec\' | \'ambiguous-install\' | \'not-bundle\' | \'not-removable\' | \'stop-profile\' | \'bundle-in-use\' | \'stale-approval\' | \'operation-error\';\n    diagnostic?: string;\n}',
   },
   {
     name: 'ManualCompactAgentContext',
     declaration: 'export interface ManualCompactAgentContext extends CompactionAgentContext {\n    runMaintenance<T>(task: (signal: AbortSignal) => Promise<T>): Promise<T>;\n}',
+  },
+  {
+    name: 'MarketplaceEntry',
+    declaration: 'export interface MarketplaceEntry {\n    readonly marketplace: string;\n    readonly key: string;\n    readonly name: string;\n    readonly description?: string;\n    readonly repository: string;\n    readonly dir?: string;\n    readonly url: string;\n    readonly installs?: number;\n    readonly stars?: number;\n    readonly state: MarketplaceEntryState;\n    readonly conflict?: string;\n}',
+  },
+  {
+    name: 'MarketplaceEntryState',
+    declaration: 'export type MarketplaceEntryState = \'available\' | \'installing\' | \'installed\';',
+  },
+  {
+    name: 'MarketplaceKind',
+    declaration: 'export type MarketplaceKind = \'github\' | \'claude-plugins-dev\' | \'skillsmp\' | \'skills-sh\';',
+  },
+  {
+    name: 'MarketplaceSearchRequest',
+    declaration: 'export interface MarketplaceSearchRequest {\n    readonly query: string;\n    readonly marketplace?: string | undefined;\n    readonly offset?: number | undefined;\n    readonly limit?: number | undefined;\n}',
+  },
+  {
+    name: 'MarketplaceSearchResult',
+    declaration: 'export interface MarketplaceSearchResult {\n    readonly skills: MarketplaceSkill[];\n    readonly totals: Record<string, number>;\n    readonly hasMore: boolean;\n    readonly nextOffset: number;\n    readonly errors: Array<{\n        readonly marketplace: string;\n        readonly message: string;\n    }>;\n}',
+  },
+  {
+    name: 'MarketplaceSkill',
+    declaration: 'export interface MarketplaceSkill {\n    readonly marketplace: string;\n    readonly key: string;\n    readonly name: string;\n    readonly description?: string;\n    readonly repository: string;\n    readonly dir?: string;\n    readonly url: string;\n    readonly installs?: number;\n    readonly stars?: number;\n}',
+  },
+  {
+    name: 'MarketplaceView',
+    declaration: 'export interface MarketplaceView {\n    readonly id: string;\n    readonly title: string;\n    readonly kind: MarketplaceKind;\n    readonly url: string;\n    readonly enabled: boolean;\n    readonly browsable: boolean;\n    readonly available?: number;\n    readonly error?: string;\n}',
   },
   {
     name: 'McpResourceProvider',
@@ -5754,6 +6123,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export interface ProjectionSnapshot {\n    asOfSeq: SessionSeqCursor;\n    values: Partial<SessionProjectionMap>;\n}',
   },
   {
+    name: 'ProjectSkillOverrides',
+    declaration: 'export interface ProjectSkillOverrides {\n    readonly enabled: readonly string[];\n    readonly disabled: readonly string[];\n}',
+  },
+  {
     name: 'PromptAssembly',
     declaration: 'export interface PromptAssembly {\n    sections: AssembledSection[];\n    contexts: AssembledContext[];\n    tools: ToolSchema[];\n    variables: Record<string, string | undefined>;\n}',
   },
@@ -6016,6 +6389,14 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'SearchLineMatch',
     declaration: 'export interface SearchLineMatch {\n    lineNumber: number;\n    line: string;\n}',
+  },
+  {
+    name: 'SearchMarketplaceRequest',
+    declaration: 'export interface SearchMarketplaceRequest {\n    readonly query: string;\n    readonly marketplace?: string;\n    readonly offset?: number;\n    readonly limit?: number;\n}',
+  },
+  {
+    name: 'SearchMarketplaceValue',
+    declaration: 'export interface SearchMarketplaceValue {\n    readonly skills: readonly MarketplaceEntry[];\n    readonly totals: Readonly<Record<string, number>>;\n    readonly hasMore: boolean;\n    readonly nextOffset: number;\n    readonly errors: ReadonlyArray<{\n        readonly marketplace: string;\n        readonly message: string;\n    }>;\n}',
   },
   {
     name: 'SearchMatchesResultView',
@@ -6562,6 +6943,14 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export type SessionWorkspacePathApplication = NativeFileApplication;',
   },
   {
+    name: 'SetSkillSourceEnabledRequest',
+    declaration: 'export interface SetSkillSourceEnabledRequest {\n    readonly id: string;\n    readonly enabled: boolean;\n}',
+  },
+  {
+    name: 'SetSkillSourceSkillsRequest',
+    declaration: 'export interface SetSkillSourceSkillsRequest {\n    readonly id: string;\n    readonly skills?: readonly string[];\n}',
+  },
+  {
     name: 'SettingsDescribeOptions',
     declaration: 'export interface SettingsDescribeOptions {\n    redactSecrets?: boolean;\n}',
   },
@@ -6662,8 +7051,56 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export interface SkillDefinition extends SkillSummary {\n    readonly content: string;\n    readonly metadata?: Readonly<Record<string, unknown>>;\n}',
   },
   {
+    name: 'SkillDocumentValue',
+    declaration: 'export interface SkillDocumentValue {\n    readonly skill: SkillDraft;\n    readonly path: string;\n    readonly editable: boolean;\n}',
+  },
+  {
+    name: 'SkillDraft',
+    declaration: 'export interface SkillDraft {\n    readonly name: string;\n    readonly description: string;\n    readonly whenToUse?: string;\n    readonly body: string;\n    readonly modelInvocable: boolean;\n    readonly userInvocable: boolean;\n}',
+  },
+  {
+    name: 'SkillEnablement',
+    declaration: 'export type SkillEnablement = (skill: SkillSummary) => boolean;',
+  },
+  {
+    name: 'SkillEnablementDecision',
+    declaration: 'export interface SkillEnablementDecision {\n    readonly enabled: boolean;\n    readonly origin: SkillEnablementOrigin;\n}',
+  },
+  {
+    name: 'SkillEnablementOrigin',
+    declaration: 'export type SkillEnablementOrigin = \'default\' | \'global\' | \'project\';',
+  },
+  {
     name: 'SkillEntry',
     declaration: 'export interface SkillEntry {\n    readonly path?: string;\n    readonly name: string;\n    readonly description: string;\n    readonly whenToUse?: string;\n    readonly modelInvocable: boolean;\n}',
+  },
+  {
+    name: 'SkillFileSourceSpec',
+    declaration: 'export interface SkillFileSourceSpec {\n    readonly kind: \'skill-file\';\n    readonly url: string;\n}',
+  },
+  {
+    name: 'SkillFilter',
+    declaration: 'export interface SkillFilter {\n    readonly name: string;\n    readonly resolve: (options: SkillLookupOptions) => Promise<SkillEnablement>;\n}',
+  },
+  {
+    name: 'SkillFilterControl',
+    declaration: 'export type SkillFilterControl = SkillProviderControl;',
+  },
+  {
+    name: 'SkillInventoryEntry',
+    declaration: 'export interface SkillInventoryEntry extends SkillSummary {\n    readonly enabled: boolean;\n    readonly disabledBy: readonly string[];\n}',
+  },
+  {
+    name: 'SkillInventoryRequest',
+    declaration: 'export interface SkillInventoryRequest {\n    readonly projectRoot?: string;\n}',
+  },
+  {
+    name: 'SkillInventorySnapshot',
+    declaration: 'export interface SkillInventorySnapshot {\n    readonly skills: SkillInventoryEntry[];\n    readonly complete: boolean;\n}',
+  },
+  {
+    name: 'SkillInventoryValue',
+    declaration: 'export interface SkillInventoryValue {\n    readonly skills: readonly ManagedSkill[];\n    readonly complete: boolean;\n    readonly projects: readonly ManagedProject[];\n    readonly preferencesAvailable: boolean;\n    readonly sourcesAvailable: boolean;\n}',
   },
   {
     name: 'SkillInvocationPolicy',
@@ -6680,6 +7117,26 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'SkillLookupOptions',
     declaration: 'export interface SkillLookupOptions {\n    readonly cwd?: string | undefined;\n    readonly signal?: AbortSignal | undefined;\n}',
+  },
+  {
+    name: 'SkillMarketplacesRequest',
+    declaration: 'export interface SkillMarketplacesRequest {\n    readonly refresh?: boolean;\n}',
+  },
+  {
+    name: 'SkillMarketplacesValue',
+    declaration: 'export interface SkillMarketplacesValue {\n    readonly marketplaces: readonly ManagedMarketplace[];\n    readonly available: boolean;\n}',
+  },
+  {
+    name: 'SkillNameRequest',
+    declaration: 'export interface SkillNameRequest {\n    readonly name: string;\n}',
+  },
+  {
+    name: 'SkillPreferenceOrigin',
+    declaration: 'export type SkillPreferenceOrigin = \'default\' | \'global\' | \'project\';',
+  },
+  {
+    name: 'SkillPreferencesState',
+    declaration: 'export interface SkillPreferencesState {\n    readonly global: {\n        readonly disabled: readonly string[];\n    };\n    readonly projects: Readonly<Record<string, ProjectSkillOverrides>>;\n}',
   },
   {
     name: 'SkillProvider',
@@ -6706,12 +7163,44 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export type SkillSource = \'project-dsh\' | \'project-agents\' | \'runtime\' | \'user-dsh\' | \'user-agents\' | \'custom\' | \'bundled\' | (string & {});',
   },
   {
+    name: 'SkillSourceOffer',
+    declaration: 'export interface SkillSourceOffer {\n    readonly name: string;\n    readonly description: string;\n    readonly dir: string;\n    readonly installed: boolean;\n}',
+  },
+  {
+    name: 'SkillSourceRequest',
+    declaration: 'export interface SkillSourceRequest {\n    readonly id: string;\n}',
+  },
+  {
+    name: 'SkillSourceSkillsValue',
+    declaration: 'export interface SkillSourceSkillsValue {\n    readonly skills: readonly ManagedSourceSkill[];\n}',
+  },
+  {
+    name: 'SkillSourcesValue',
+    declaration: 'export interface SkillSourcesValue {\n    readonly sources: readonly ManagedSource[];\n}',
+  },
+  {
+    name: 'SkillSourceSyncState',
+    declaration: 'export type SkillSourceSyncState = \'never\' | \'syncing\' | \'ok\' | \'error\';',
+  },
+  {
+    name: 'SkillSourceValue',
+    declaration: 'export interface SkillSourceValue {\n    readonly source: ManagedSource;\n}',
+  },
+  {
+    name: 'SkillSourceView',
+    declaration: 'export interface SkillSourceView {\n    readonly id: string;\n    readonly url: string;\n    readonly ref?: string;\n    readonly path?: string;\n    readonly skills?: readonly string[];\n    readonly enabled: boolean;\n    readonly origin: \'default\' | \'user\';\n    readonly kind: SourceSpec[\'kind\'];\n    readonly sync: {\n        readonly state: SkillSourceSyncState;\n        readonly commit?: string;\n        readonly syncedAt?: string;\n        readonly error?: string;\n        readonly skillCount: number;\n        readonly availableCount: number;\n        readonly latest?: string;\n        readonly updateAvailable: boolean;\n        readonly checkedAt?: string;\n    };\n}',
+  },
+  {
     name: 'SkillSummary',
     declaration: 'export interface SkillSummary {\n    readonly path?: string;\n    readonly name: string;\n    readonly description: string;\n    readonly whenToUse?: string;\n    readonly invocation: SkillInvocationPolicy;\n    readonly source: SkillSource;\n    readonly provider: string;\n    readonly resourceBase?: SkillResourceBase;\n}',
   },
   {
     name: 'SkillViewOptions',
     declaration: 'export interface SkillViewOptions extends SkillLookupOptions {\n    readonly scope?: ScopeKey | undefined;\n}',
+  },
+  {
+    name: 'SourceSpec',
+    declaration: 'export type SourceSpec = GitHubSourceSpec | ArchiveSourceSpec | SkillFileSourceSpec;',
   },
   {
     name: 'SpawnTeammateRequest',
