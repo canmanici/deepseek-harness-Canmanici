@@ -1,0 +1,47 @@
+{
+  "name": "@deepseek-ai/dsh-host-open-design",
+  "description": "Optional DSH-managed OpenDesign runtime lifecycle and authenticated local status routes",
+  "version": "0.1.7-alpha.2",
+  "publishConfig": { "access": "public" },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/deepseek-harness/deepseek-harness.git",
+    "directory": "packages/host/open-design"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./shared": {
+      "types": "./lib/types/shared.d.ts",
+      "default": "./lib/types/shared.js"
+    },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": ["lib/index.js", "lib/types/**/*.js", "lib/types/**/*.d.ts"],
+  "scripts": {
+    "bundle": "tsdown",
+    "watch": "tsdown --watch"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@deepseek-ai/dsh-atomic-write": "workspace:*",
+    "@deepseek-ai/dsh-home-paths": "workspace:*",
+    "@deepseek-ai/schemastery": "workspace:~",
+    "tar": "7.5.22"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "workspace:~"
+  },
+  "devDependencies": {
+    "@deepseek-ai/cordis": "workspace:~",
+    "@deepseek-ai/dsh-host-webserver": "workspace:*",
+    "@deepseek-ai/dsh-subprocess": "workspace:*",
+    "@types/node": "^24.0.0"
+  }
+}

@@ -1328,6 +1328,34 @@ export interface Config {
 
 来源： [`packages/host/mcp-manager/src/index.ts:38`](../packages/host/mcp-manager/src/index.ts)
 
+<a id="deepseek-aidsh-host-open-design"></a>
+
+## `@deepseek-ai/dsh-host-open-design`
+
+需要： `webServer` · `connection` · `subprocess`
+
+```ts config-catalog
+/** OpenDesign runtime download, storage, and local service settings. */
+export interface Config {
+  /** HTTPS download base for immutable DSH GitHub release assets. */
+  readonly runtimeDownloadBaseUrl: string
+  /** Loopback daemon port shared with the MCP client entry. */
+  readonly daemonPort: number
+  /** Loopback Studio port shared with the embedded panel. */
+  readonly webPort: number
+  /** Maximum compressed runtime archive size in bytes. */
+  readonly maxRuntimeBytes: number
+  /** Maximum archive download duration in milliseconds. */
+  readonly downloadTimeoutMs: number
+  /** Maximum wait for daemon and Studio readiness in milliseconds. */
+  readonly startupTimeoutMs: number
+  /** Maximum wait for another profile's runtime installation lock. */
+  readonly installLockWaitMs: number
+}
+```
+
+来源： [`packages/host/open-design/src/index.ts:35`](../packages/host/open-design/src/index.ts)
+
 <a id="deepseek-aidsh-host-open-in-app"></a>
 
 ## `@deepseek-ai/dsh-host-open-in-app`
@@ -4344,6 +4372,7 @@ export interface Config {
 - `@deepseek-ai/dsh-client-ui-mcp-library`（[`packages/client/ui-mcp-library/src/index.ts`](../packages/client/ui-mcp-library/src/index.ts)）
 - `@deepseek-ai/dsh-client-ui-message-feedback`（[`packages/client/ui-message-feedback/src/index.ts`](../packages/client/ui-message-feedback/src/index.ts)）
 - `@deepseek-ai/dsh-client-ui-model-selection`（[`packages/client/ui-model-selection/src/index.ts`](../packages/client/ui-model-selection/src/index.ts)）
+- `@deepseek-ai/dsh-client-ui-open-design`（[`packages/client/ui-open-design/src/index.ts`](../packages/client/ui-open-design/src/index.ts)）
 - `@deepseek-ai/dsh-client-ui-open-in-app`（[`packages/client/ui-open-in-app/src/index.ts`](../packages/client/ui-open-in-app/src/index.ts)）
 - `@deepseek-ai/dsh-client-ui-permission-presets`（[`packages/client/ui-permission-presets/src/index.ts`](../packages/client/ui-permission-presets/src/index.ts)）
 - `@deepseek-ai/dsh-client-ui-plan`（[`packages/client/ui-plan/src/index.ts`](../packages/client/ui-plan/src/index.ts)）

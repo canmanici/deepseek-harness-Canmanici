@@ -136,6 +136,36 @@ export interface FileLockOptions {
    * contender that acquires the lock afterwards re-reads the committed state.
    */
   waitMs?: number
+  /**
+   * Abort waiting for the lock before the callback starts. After acquisition,
+   * the callback owns cancellation of its operation; the lock still releases
+   * when that operation settles.
+   */
+  signal?: AbortSignal
+}
+
+/** Stop a lock contender when its owner cancels the enclosing operation. */
+function throwIfLockWaitAborted(signal: AbortSignal | undefined): void {
+  if (signal?.aborted) throw signal.reason ?? new Error('atomic-write: lock acquisition aborted')
+}
+
+/** Wait one contention interval without leaving an abort listener installed. */
+function waitForLockRetry(delay: number, signal: AbortSignal | undefined): Promise<void> {
+  throwIfLockWaitAborted(signal)
+  return new Promise<void>((resolve, reject) => {
+    const removeAbortListener = (): void => signal?.removeEventListener('abort', onAbort)
+    const onAbort = (): void => {
+      clearTimeout(timer)
+      removeAbortListener()
+      reject(signal?.reason ?? new Error('atomic-write: lock acquisition aborted'))
+    }
+    const timer = setTimeout(() => {
+      removeAbortListener()
+      resolve()
+    }, delay)
+    signal?.addEventListener('abort', onAbort, { once: true })
+    if (signal?.aborted) onAbort()
+  })
 }
 
 /**
@@ -147,12 +177,14 @@ export interface FileLockOptions {
  * Windows exclusive-create behavior. Windows retries one unconfirmed EPERM
  * because the holder can release before the probe; a repeated unconfirmed
  * permission error is rethrown. Contention backs off exponentially and times out
- * after the deadline. The contender never removes an existing lock because
- * file age cannot prove that its owner stopped; orphan recovery is an operator
- * action. The parent directory must exist.
+ * after the deadline. An abort signal can stop a contender before the callback
+ * starts; once the callback starts, it owns cancellation of its operation and
+ * the lock remains held until the callback settles. The contender never
+ * removes an existing lock because file age cannot prove that its owner stopped;
+ * orphan recovery is an operator action. The parent directory must exist.
  * @param filename - the file whose writers this lock serializes.
  * @param operation - the read-render-commit cycle to run while holding the lock.
- * @param options - acquisition options; omitted waits {@link DEFAULT_LOCK_WAIT_MS}.
+ * @param options - acquisition deadline and optional pre-callback cancellation signal.
  * @returns the operation's result; the lock releases on both outcomes.
  */
 export async function withFileLock<T>(
@@ -162,30 +194,35 @@ export async function withFileLock<T>(
 ): Promise<T> {
   const lockPath = `${filename}.lock`
   const deadline = Date.now() + (options?.waitMs ?? DEFAULT_LOCK_WAIT_MS)
+  const signal = options?.signal
   let delay = LOCK_RETRY_INITIAL_MS
   let retriedUnconfirmedPermissionError = false
-  for (;;) {
-    try {
-      await writeFile(lockPath, `${process.pid}\n`, { mode: 0o600, flag: 'wx' })
-      break
-    } catch (error) {
-      if (!await isLockContention(error, lockPath)) {
-        // Windows can release the competing lock between exclusive create and lstat.
-        if (process.platform !== 'win32'
-          || (error as NodeJS.ErrnoException | null)?.code !== 'EPERM'
-          || retriedUnconfirmedPermissionError) throw error
-        retriedUnconfirmedPermissionError = true
-      }
-    }
-    if (Date.now() >= deadline) {
-      throw new Error(`atomic-write: timed out waiting for the writer lock at ${lockPath}`)
-    }
-    await new Promise(resolve => setTimeout(resolve, delay))
-    delay = Math.min(delay * 2, LOCK_RETRY_MAX_MS)
-  }
+  let acquired = false
   try {
+    for (;;) {
+      throwIfLockWaitAborted(signal)
+      try {
+        await writeFile(lockPath, `${process.pid}\n`, { mode: 0o600, flag: 'wx' })
+        acquired = true
+        break
+      } catch (error) {
+        if (!await isLockContention(error, lockPath)) {
+          // Windows can release the competing lock between exclusive create and lstat.
+          if (process.platform !== 'win32'
+            || (error as NodeJS.ErrnoException | null)?.code !== 'EPERM'
+            || retriedUnconfirmedPermissionError) throw error
+          retriedUnconfirmedPermissionError = true
+        }
+      }
+      if (Date.now() >= deadline) {
+        throw new Error(`atomic-write: timed out waiting for the writer lock at ${lockPath}`)
+      }
+      await waitForLockRetry(delay, signal)
+      delay = Math.min(delay * 2, LOCK_RETRY_MAX_MS)
+    }
+    throwIfLockWaitAborted(signal)
     return await operation()
   } finally {
-    await rm(lockPath, { force: true })
+    if (acquired) await rm(lockPath, { force: true })
   }
 }

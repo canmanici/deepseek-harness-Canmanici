@@ -1,6 +1,6 @@
 {
   "name": "@deepseek-ai/dsh-open-design",
-  "description": "Optional OpenDesign MCP tools for DSH profiles",
+  "description": "Optional DSH-managed OpenDesign runtime, Studio panel, and MCP tools",
   "version": "0.1.7-alpha.2",
   "publishConfig": {
     "access": "public"
@@ -34,6 +34,8 @@
     }
   },
   "dependencies": {
+    "@deepseek-ai/dsh-client-ui-open-design": "workspace:*",
+    "@deepseek-ai/dsh-host-open-design": "workspace:*",
     "@deepseek-ai/dsh-mcp-client": "workspace:*"
   },
   "peerDependencies": {

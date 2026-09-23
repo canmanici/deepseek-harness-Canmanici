@@ -1,0 +1,55 @@
+# Build and publish only the opt-in OpenDesign headless runtime payload. The
+# regular DSH release lane never packs or downloads this platform artifact.
+name: OpenDesign runtime
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: open-design-runtime-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  linux-x64:
+    name: Build Linux x64 headless runtime
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: true
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.2
+          run_install: false
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          package-manager-cache: false
+
+      - name: Build pinned OpenDesign runtime
+        run: node scripts/open-design-runtime.mjs build
+
+      - name: Publish versioned runtime release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          identity=$(node scripts/open-design-runtime.mjs identity)
+          commit=$(node -e 'process.stdout.write(JSON.parse(process.argv[1]).commit)' "$identity")
+          version=$(node -e 'process.stdout.write(JSON.parse(process.argv[1]).version)' "$identity")
+          tag=$(node -e 'process.stdout.write(JSON.parse(process.argv[1]).tag)' "$identity")
+          archive="dist/optional-runtimes/open-design/$commit-linux-x64/open-design-$commit-linux-x64.tar.gz"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo "Refusing to replace existing runtime release $tag" >&2
+            exit 1
+          fi
+          gh release create "$tag" \
+            --target "$GITHUB_SHA" \
+            --title "OpenDesign runtime $version" \
+            --notes "Optional Linux x64 headless runtime built from the OpenDesign submodule commit $commit."
+          gh release upload "$tag" "$archive" "$archive.sha256"

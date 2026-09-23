@@ -54,7 +54,7 @@ await withFileLock('/home/u/.dsh/cordis.patch.yml', async () => {
 })
 ```
 
-Only writers contend — readers never take the lock — and a contender backs off exponentially and fails with a timed-out error rather than blocking forever. How long a contender waits is stated per call through `waitMs`: the default is sized for file work alone, so a holder whose cycle includes a network round trip — a credential mutation that refreshes an expired token — states a longer one, because leaving the default would fail every other writer of that file for the duration. The retry cadence stays fixed. A contender never removes an existing lock, because file age cannot prove that its owner stopped.
+Only writers contend — readers never take the lock — and a contender backs off exponentially and fails with a timed-out error rather than blocking forever. How long a contender waits is stated per call through `waitMs`: the default is sized for file work alone, so a holder whose cycle includes a network round trip — a credential mutation that refreshes an expired token — states a longer one, because leaving the default would fail every other writer of that file for the duration. Pass `signal` to cancel acquisition and prevent the callback from starting; after the callback starts, it owns cancellation and the lock remains held until it settles. The retry cadence stays fixed. A contender never removes an existing lock, because file age cannot prove that its owner stopped.
 
 ### Failures to plan for
 
@@ -83,7 +83,7 @@ The package is built on one separation: the atomic commit owns the swap, and the
 
 `writeFileAtomic` writes a random-suffix sibling opened with exclusive create (`wx`), then renames it over the target. The exclusive open refuses to follow a symlink planted at a guessable temp path; the same-directory sibling keeps the rename on one filesystem; and the rename replaces a symlinked target itself instead of writing through to its referent. A Windows retry keeps the same complete sibling and uses bounded exponential backoff, so temporary use of the target by software outside the cooperative writer lock cannot turn a safe replacement into an immediate failure; the archived [retry decision record](../../../.agents/notes/archived/bug-fix/2026-08-29-windows-atomic-replace-retry.md) documents the original rationale and rejected alternatives.
 
-`withFileLock` creates a `<filename>.lock` sibling with `wx`. `EEXIST` identifies contention directly; `EPERM` does so only when a fresh `lstat` confirms the lock path exists, covering Windows exclusive-create behavior without hiding an unrelated permission failure. The lock records its creator's PID and is removed by the holder in a `finally`; contention backs off exponentially and fails when the per-call `waitMs` deadline (default two seconds) passes.
+`withFileLock` creates a `<filename>.lock` sibling with `wx`. `EEXIST` identifies contention directly; `EPERM` does so only when a fresh `lstat` confirms the lock path exists, covering Windows exclusive-create behavior without hiding an unrelated permission failure. The lock records its creator's PID and is removed by the holder in a `finally`; contention backs off exponentially and stops when the per-call `waitMs` deadline (default two seconds) passes or its optional signal aborts before the callback starts.
 
 ### Why the swap stays safe
 

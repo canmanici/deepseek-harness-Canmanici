@@ -1,12 +1,25 @@
 - insert:
+    - id: host-open-design
+      name: '@deepseek-ai/dsh-host-open-design'
+      config:
+        daemonPort: 17456
+        webPort: 17457
+    - id: ui-open-design
+      name: '@deepseek-ai/dsh-client-ui-open-design'
     - id: mcp-open-design
       name: '@deepseek-ai/dsh-mcp-client'
       config:
         serverName: open-design
         transport: stdio
-        command: !!js process.env.OPEN_DESIGN_MCP_COMMAND || 'od'
+        command: !!js dshHomePath('open-design', 'runtime', '0d3a14c1df6dc5017f3cc3ef05b24558250c220b', 'resources', 'open-design', 'bin', 'node')
         args:
+          - !!js dshHomePath('open-design', 'runtime', '0d3a14c1df6dc5017f3cc3ef05b24558250c220b', 'assembled', 'app', 'node_modules', '@open-design', 'daemon', 'bin', 'od.mjs')
           - mcp
           - --daemon-url
-          - !!js process.env.OPEN_DESIGN_DAEMON_URL || 'http://127.0.0.1:7456'
-        failOnStartupError: true
+          - http://127.0.0.1:17456
+        cwd: !!js dshHomePath('open-design', 'runtime', '0d3a14c1df6dc5017f3cc3ef05b24558250c220b', 'assembled', 'app')
+        failOnStartupError: false
+        reconnect:
+          initialDelayMs: 500
+          maxDelayMs: 30000
+          maxAttempts: 9007199254740991

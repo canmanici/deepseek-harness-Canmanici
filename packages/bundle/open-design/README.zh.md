@@ -1,5 +1,5 @@
 ---
-description: "通过 MCP 在 DSH profile 中启用 OpenDesign 本地项目与设计工具，适用于已在本机运行 OpenDesign 的用户。"
+description: "在 DSH profile 中添加由 DSH 管理的可选 OpenDesign 运行时、嵌入式 Studio 面板与智能体工具。"
 kind: "package-bundle"
 ---
 
@@ -9,7 +9,7 @@ kind: "package-bundle"
 
 ## 概述
 
-这个可选 profile 组合包会通过 `mcp__open-design__...` 将 OpenDesign 本地 MCP 工具提供给 DSH 智能体。安装 OpenDesign 后，可在 DSH Web 的插件管理中启用；随附 profile 默认关闭它。OpenDesign 的守护进程、项目和 Studio UI 仍在 DSH 之外。它的工具可以操作该守护进程可访问的项目，而不只限于 DSH 工作区。
+此可选 profile 组合包启用后会下载并启动固定版本的 OpenDesign headless runtime，在 DSH 侧栏中加入 Studio，并通过 `mcp__open-design__...` 向智能体提供本地 MCP 工具。用户无需单独安装或启动 OpenDesign；随附 profile 默认关闭此组合包。首个运行时产物面向 Linux x64。OpenDesign 可操作其守护进程能访问的项目，不只限于 DSH 工作区。
 
 ## 目录
 
@@ -25,9 +25,7 @@ kind: "package-bundle"
 <a id="use-this-package"></a>
 ## 使用此包
 
-按照 [OpenDesign 官方设置指南](https://github.com/nexu-io/open-design#readme)安装并启动 OpenDesign。在 OpenDesign 设置 → MCP server 中复制本地 MCP server 的命令路径。如果 `od` 不是正确的可执行文件，请在启动 DSH 前将 `OPEN_DESIGN_MCP_COMMAND` 设为该路径；macOS 可能会把 `od` 解析为系统内置的 `/usr/bin/od`。如果 OpenDesign 守护进程没有使用 `http://127.0.0.1:7456`，请设置 `OPEN_DESIGN_DAEMON_URL`。
-
-在 DSH Web 中打开**插件**并启用 **OpenDesign**。启用后请新建会话。DSH 会通过 stdio 启动 OpenDesign MCP 命令，并以 `mcp__open-design__` 开头的名称发现其工具。如果找不到 CLI 或守护进程不可用，该可选 MCP 条目会保持未激活；DSH 会报告启动错误，并继续使用 profile 的其余部分。
+在 DSH Web 中打开**插件**并启用 **OpenDesign**，然后从侧栏选择 **OpenDesign**。此组合包已包含在 DSH 中，默认关闭；用户无需另行安装或启动 OpenDesign。DSH 会把带版本号的运行时下载到 DSH 自己管理的存储中，启动仅监听 loopback 的守护进程与 Studio，并连接智能体工具。Studio 会显示下载进度，并可重试失败的安装。运行时产物与普通 DSH 安装包分开发布，须从仓库的 **OpenDesign runtime** workflow 发布。
 
 OpenDesign 负责自己的项目文件和守护进程访问权限。DSH 文件系统沙箱无法约束通过 OpenDesign MCP 工具所做的文件更改，因此在批准写入或删除工具调用前请先检查。
 
@@ -39,13 +37,13 @@ OpenDesign 负责自己的项目文件和守护进程访问权限。DSH 文件�
 <details>
 <summary>实现细节——点击展开</summary>
 
-此组合包会插入一个 `dsh-mcp-client` 条目。MCP 客户端通过 stdio 启动已配置的 OpenDesign CLI、注册发现到的工具，并随 profile 一起释放该进程。此组合包不包含 OpenDesign 源码、守护进程或 Studio UI。
+此组合包会插入 Host 运行时管理器、浏览器 Studio 面板与 `dsh-mcp-client` 条目。Host 会下载并校验固定版本的 OpenDesign 负载，在 DSH home 下原子安装，通过 `ctx.subprocess` 启动 headless bootstrap，并等待守护进程与 Studio 就绪。profile 卸载时，Host 仅通过 OpenDesign 关闭 API 停止 `dsh-open-design` sidecar generation，并等待 API 确认没有剩余进程后才完成卸载。MCP 客户端使用随包 Node runtime 通过 stdio 连接守护进程。大型 Studio 负载不会进入常规 DSH 包，仅在启用此组合包时下载。
 
 | 文件 | 职责 |
 |---|---|
-| [`cordis.patch.yml`](cordis.patch.yml) | OpenDesign MCP 客户端条目和本地命令设置 |
+| [`cordis.patch.yml`](cordis.patch.yml) | 运行时、浏览器面板与 MCP 客户端条目 |
 | [`src/index.ts`](src/index.ts) | 包入口；不提供运行时 API |
-| — | 不发布运行时不变式伴随包；该组合包只是静态 patch 载体，连接生命周期由 MCP 客户端包负责。 |
+| — | 不发布运行时不变式伴随包；此组合包是静态 patch 载体，进程生命周期由 Host 与 MCP 包负责。 |
 
 </details>
 
@@ -73,10 +71,12 @@ OpenDesign 负责自己的项目文件和守护进程访问权限。DSH 文件�
 
 <a id="known-limitations-and-deferred-work"></a>
 
-- 必须单独安装 OpenDesign；其本地 CLI 和守护进程不属于 DSH profile 生命周期。
-- 此组合包只提供 MCP 工具；它不会把 OpenDesign Studio UI 嵌入 DSH，也不会把其设计系统和技能目录复制到 DSH。
-- OpenDesign MCP 操作遵循 OpenDesign 守护进程的项目范围和文件权限。DSH 无法将这些操作限制在当前 DSH 工作区内。
-- OpenDesign 负责其 MCP 工具兼容性和项目选择行为。更改命令或守护进程 URL 后，请重启 DSH profile。
+- 首个已发布运行时产物目前仅支持 Linux x64；其他操作系统会收到明确的不支持平台错误。
+- 每个 DSH home 同时只能有一个 profile 使用此组合包；这些 profile 共用数据目录和默认环回端口。若修改 `daemonPort`，还须在同一 profile patch 中更新 MCP 条目的 `--daemon-url`。
+- 嵌入式 Studio 当前仅在 DSH 浏览器与 DSH Host 位于同一台电脑时可用；尚未提供远程浏览器代理。
+- OpenDesign 守护进程使用 DSH 进程用户的权限访问项目文件。DSH 工作区文件权限与沙箱不能限制 OpenDesign 工具操作。
+- 此集成嵌入 Studio 和工具，但不会把 OpenDesign 设计系统或技能目录复制到 DSH。
+- OpenDesign 负责 MCP 工具兼容性和项目选择行为；此集成固定一个 OpenDesign 源码修订版，并从该源码构建运行时。
 
 <a id="dev-note"></a>
 ### 开发备注

@@ -1,0 +1,187 @@
+diff --git a/packages/dsh-runtime/src/index.ts b/packages/dsh-runtime/src/index.ts
+index 8808aef..6b9c8ad 100644
+--- a/packages/dsh-runtime/src/index.ts
++++ b/packages/dsh-runtime/src/index.ts
+@@ -13,6 +13,7 @@ import {
+   createUserMessage,
+   ReasoningEffortId,
+   type ContentBlock,
++  type StreamChunk,
+   type TokenUsage,
+ } from '@deepseek-ai/dsh-llm';
+ import { SessionId, type SessionEvent, type TurnEndReason } from '@deepseek-ai/dsh-session';
+@@ -38,6 +39,23 @@ export const inject = [
+
+ const PLUGIN_VERSION = '0.1.0';
+
++/**
++ * Live assistant chunk publication used by dsh 0.1.3-alpha.1 and later, which
++ * removed the durable `assistant/chunk` Session event. Older dsh builds never
++ * emit this event, and newer ones never emit `assistant/chunk`, so listening to
++ * both delivers each chunk exactly once on either line.
++ */
++type AssistantStreamPayload = {
++  agent: { session: { id: unknown } };
++  frame: { type: string; chunk?: StreamChunk };
++};
++
++declare module '@deepseek-ai/cordis' {
++  interface Events {
++    'agent/assistant-stream'(payload: AssistantStreamPayload): void;
++  }
++}
++
+ type Output = { write(chunk: string): unknown };
+ type ExitFallbackTimer = { unref(): unknown };
+ type ExitFallbackScheduler = (callback: () => void, delayMs: number) => ExitFallbackTimer;
+@@ -205,6 +223,14 @@ async function listModelCatalog(ctx: Context): Promise<ModelCatalogEntry[]> {
+   return catalog;
+ }
+
++function emitChunk(output: Output, request: ExecuteCommand, chunk: StreamChunk): void {
++  if (chunk.type === 'text-delta' && chunk.text !== '') {
++    writeFrame(output, { v: 1, type: 'text', request_id: request.request_id, content: chunk.text });
++  } else if (chunk.type === 'reasoning-delta' && chunk.text !== '') {
++    writeFrame(output, { v: 1, type: 'thinking', request_id: request.request_id, content: chunk.text });
++  }
++}
++
+ function emitSessionEvent(
+   output: Output,
+   request: ExecuteCommand,
+@@ -213,15 +239,9 @@ function emitSessionEvent(
+   event: SessionEvent,
+ ): void {
+   switch (event.type) {
+-    case 'assistant/chunk': {
+-      const chunk = event.data.chunk;
+-      if (chunk.type === 'text-delta' && chunk.text !== '') {
+-        writeFrame(output, { v: 1, type: 'text', request_id: request.request_id, content: chunk.text });
+-      } else if (chunk.type === 'reasoning-delta' && chunk.text !== '') {
+-        writeFrame(output, { v: 1, type: 'thinking', request_id: request.request_id, content: chunk.text });
+-      }
++    case 'assistant/chunk':
++      emitChunk(output, request, event.data.chunk);
+       return;
+-    }
+     case 'tool/call':
+       writeFrame(output, {
+         v: 1,
+@@ -283,6 +303,14 @@ async function execute(
+     }
+     if (event.type === 'turn/end') turnEnd = event;
+   };
++  let disposeStream = () => {};
++  let streaming = false;
++  const onAssistantStream = ({ agent, frame }: AssistantStreamPayload) => {
++    if (!streaming || String(agent.session.id) !== String(sessionId)) return;
++    if (frame.type !== 'chunk' || frame.chunk === undefined) return;
++    emitChunk(output, request, frame.chunk);
++    if (frame.chunk.type === 'text-delta') assistantOutput += frame.chunk.text;
++  };
+
+   try {
+     try {
+@@ -330,6 +358,8 @@ async function execute(
+     }
+     firstSeq = handle.agent.session.seq + 1;
+     disposeEvent = ctx.on('session/event', onSessionEvent);
++    streaming = true;
++    disposeStream = ctx.on('agent/assistant-stream', onAssistantStream, { global: true });
+     await handle.agent.followup(createUserMessage({
+       content: [{ type: 'text', text: request.prompt }],
+       source: { kind: 'user' },
+@@ -371,6 +401,7 @@ async function execute(
+     });
+   } finally {
+     disposeEvent();
++    disposeStream();
+     await handle?.dispose().catch(() => undefined);
+     onHandle(undefined);
+   }
+@@ -475,6 +506,7 @@ export const internals = {
+   createCancellationLatch,
+   errorFacts,
+   emitSessionEvent,
++  emitChunk,
+   execute,
+   listModelCatalog,
+   requestProfileExit,
+diff --git a/packages/dsh-runtime/tests/protocol.test.ts b/packages/dsh-runtime/tests/protocol.test.ts
+index b703170..cab43cd 100644
+--- a/packages/dsh-runtime/tests/protocol.test.ts
++++ b/packages/dsh-runtime/tests/protocol.test.ts
+@@ -161,6 +161,73 @@ describe('@open-design/dsh-runtime protocol', () => {
+     assert.deepEqual(calls, ['managed:0', 'scheduled:1000', 'unref', 'forced']);
+   });
+
++  test('streams assistant text published through agent/assistant-stream', async () => {
++    const listeners = new Map<string, (...args: unknown[]) => void>();
++    const sessionId = { current: '' };
++    const handle = {
++      agent: {
++        session: { seq: 0 },
++        whenIdle: async () => {},
++        followup: async () => {
++          const stream = listeners.get('agent/assistant-stream');
++          const agent = { session: { id: sessionId.current } };
++          stream?.({ agent: { session: { id: 'other-session' } }, frame: { type: 'chunk', chunk: { type: 'text-delta', index: 0, text: 'ignored' } } });
++          stream?.({ agent, frame: { type: 'start' } });
++          stream?.({ agent, frame: { type: 'chunk', chunk: { type: 'reasoning-delta', index: 0, text: 'think' } } });
++          stream?.({ agent, frame: { type: 'chunk', chunk: { type: 'text-delta', index: 1, text: 'O' } } });
++          stream?.({ agent, frame: { type: 'chunk', chunk: { type: 'text-delta', index: 1, text: 'K' } } });
++          stream?.({ agent, frame: { type: 'end' } });
++        },
++        cancel: () => {},
++      },
++      dispose: async () => {},
++    };
++    const ctx = {
++      agentDefaultModel: {
++        currentSelection: () => ({ provider: 'deepseek-official', model: 'deepseek-chat' }),
++      },
++      agents: {
++        create: async ({ sessionId: id }: { sessionId: string }) => {
++          sessionId.current = id;
++          return handle;
++        },
++      },
++      on: (name: string, listener: (...args: unknown[]) => void) => {
++        listeners.set(name, listener);
++        return () => listeners.delete(name);
++      },
++      sessions: { flush: async () => {} },
++    };
++    const input = new PassThrough();
++    const chunks: string[] = [];
++    const serving = internals.serve(
++      ctx as never,
++      { write: (chunk: string) => chunks.push(chunk) },
++      () => {},
++      input,
++      (exit) => exit(0),
++    );
++
++    input.end(`${JSON.stringify({
++      v: 1,
++      type: 'execute',
++      request_id: 'run-live-stream',
++      cwd: '/project',
++      prompt: 'say OK',
++      mcp_servers: [],
++    })}\n`);
++    await serving;
++
++    const frames = chunks.map((chunk) => JSON.parse(chunk) as { type: string; content?: string; output?: string });
++    assert.deepEqual(
++      frames.filter((frame) => frame.type === 'text' || frame.type === 'thinking').map((frame) => [frame.type, frame.content]),
++      [['thinking', 'think'], ['text', 'O'], ['text', 'K']],
++    );
++    assert.equal(frames.at(-1)?.type, 'result');
++    assert.equal(frames.at(-1)?.output, 'OK');
++    assert.equal(listeners.has('agent/assistant-stream'), false);
++  });
++
+   test('replays cancellation received before execute initializes its AbortController', async () => {
+     let createSignal: AbortSignal | undefined;
+     let disposeCalls = 0;
