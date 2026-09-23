@@ -149,6 +149,22 @@ const SERVICE_ROLES: ServiceRole[] = [
     note: 'Connection-owned providers serve shared resource tools in the calling agent scope.',
   },
   {
+    key: 'mcpStatus',
+    pkg: 'mcp-status',
+    title: 'MCP connection status',
+    mode: 'core',
+    consumers: ['mcp-client', 'host-mcp-manager'],
+    note: 'Connection-owned status sources report each server state and tools for management surfaces.',
+  },
+  {
+    key: 'mcpManager',
+    pkg: 'host-mcp-manager',
+    title: 'MCP management Remote',
+    mode: 'core',
+    consumers: ['client-ui-mcp-library'],
+    note: 'Projects configured MCP servers with live status for the MCP page, writes them through the plugin manager, and searches the MCP Registry.',
+  },
+  {
     key: 'browserUse',
     pkg: 'browser-use',
     title: 'Browser-use provider registration',

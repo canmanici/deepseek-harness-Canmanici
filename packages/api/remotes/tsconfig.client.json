@@ -48,6 +48,9 @@
       "path": "../../host/skill-manager"
     },
     {
+      "path": "../../host/mcp-manager"
+    },
+    {
       "path": "../../interaction/commands"
     },
     {

@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os'
 import { expect, it, onTestFinished } from 'vitest'
 import { applyEntryPatches } from '@deepseek-ai/cordis-plugin-include'
 import { loadOptionalPatches } from '@deepseek-ai/dsh-app-boot'
-import { writePluginEnabled } from '../src/patch.ts'
+import { appendPluginEntry, removePluginEntry, writePluginEnabled } from '../src/patch.ts'
 
 async function fixture(text?: string): Promise<string> {
   const dir = await mkdtemp(join(tmpdir(), 'manager-patch-'))
@@ -81,4 +81,26 @@ it('updates the last matching named override and leaves mismatched names untouch
   expect(await readFile(file, 'utf8')).toBe(text)
   expect(await writePluginEnabled(file, 'tool', 'package', false)).toBe(true)
   expect(loadOptionalPatches('test', file)).toHaveLength(3)
+})
+
+it('inserts a new entry once and removes it with its overrides only when the patch inserted it', async () => {
+  const file = await fixture('# keep\n- id: other\n  disabled: true\n- insert:\n    - id: kept\n      name: package\n')
+  await appendPluginEntry(file, { id: 'mcp-docs', name: 'package', config: { serverName: 'docs' } })
+  await expect(appendPluginEntry(file, { id: 'mcp-docs', name: 'package', config: {} })).rejects.toThrow('already exists')
+  await expect(appendPluginEntry(file, { id: 'other', name: 'package', config: {} })).rejects.toThrow('already exists')
+  await writePluginEnabled(file, 'mcp-docs', 'package', false)
+  expect(loadOptionalPatches('test', file)).toEqual([
+    { id: 'other', disabled: true },
+    { insert: [{ id: 'kept', name: 'package' }] },
+    { insert: [{ id: 'mcp-docs', name: 'package', config: { serverName: 'docs' } }] },
+    { id: 'mcp-docs', disabled: true },
+  ])
+  expect(await removePluginEntry(file, 'other', 'package')).toBe(false)
+  expect(await removePluginEntry(file, 'mcp-docs', 'elsewhere')).toBe(false)
+  expect(await removePluginEntry(file, 'mcp-docs', 'package')).toBe(true)
+  expect(await readFile(file, 'utf8')).toContain('# keep')
+  expect(loadOptionalPatches('test', file)).toEqual([{ id: 'other', disabled: true }, { insert: [{ id: 'kept', name: 'package' }] }])
+  await writeFile(file, '- insert:\n    - id: kept\n      name: package\n    - id: gone\n      name: package\n')
+  expect(await removePluginEntry(file, 'gone', 'package')).toBe(true)
+  expect(loadOptionalPatches('test', file)).toEqual([{ insert: [{ id: 'kept', name: 'package' }] }])
 })

@@ -6,6 +6,7 @@
 
 import type { Context } from '@deepseek-ai/cordis'
 import type { McpResourceProvider } from '@deepseek-ai/dsh-mcp-resources'
+import type { McpStatusSource } from '@deepseek-ai/dsh-mcp-status'
 import type {} from '@deepseek-ai/dsh-system-prompt'
 
 /** Connection-owned values used by the resource and prompt consumers. */
@@ -17,6 +18,8 @@ export interface ServerContext {
    * @returns literal prompt text, or an empty string when no server instructions are active.
    */
   instructions(): string
+  /** Connection state and tool names for management surfaces. */
+  status: McpStatusSource
 }
 
 /**
@@ -28,6 +31,9 @@ export interface ServerContext {
 export function registerServerContext(ctx: Context, server: string, connection: ServerContext): void {
   ctx.inject(['mcpResources'], (inner) => {
     inner.mcpResources.register(server, connection.resources)
+  })
+  ctx.inject(['mcpStatus'], (inner) => {
+    inner.mcpStatus.register(server, connection.status)
   })
   ctx.inject(['systemPrompt'], (inner) => {
     inner.systemPrompt.section({

@@ -121,6 +121,20 @@ Manage profile files and apply their declared reload lifecycle.
  */
 @Remote setPluginEnabled(id: PluginEntryId, enabled: boolean): Promise<ChangeResult>
 
+/** Add one plugin entry to the profile patch and apply it on live profiles. Host-side only; management
+ * surfaces that own a plugin family, such as MCP servers, call it with a validated config.
+ * @param entry Unique entry id, module name, and config.
+ * @returns Saved and runtime outcomes.
+ */
+addEntry(entry: { id: string; name: string; config: Record<string, unknown> }): Promise<ChangeResult>
+
+/** Remove one plugin entry that the profile patch defines and apply it on live profiles. Host-side only.
+ * @param id Composition entry id.
+ * @param name Module name the defining row carries.
+ * @returns Saved and runtime outcomes; `failed` when the profile patch does not define the entry.
+ */
+removeEntry(id: string, name: string): Promise<ChangeResult>
+
 /** Select or remove a bundle layer while retaining installed dependencies.
  * @param name Bundle package name.
  * @param enabled Whether the bundle contributes its patch layer.

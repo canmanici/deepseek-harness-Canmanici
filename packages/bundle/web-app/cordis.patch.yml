@@ -127,6 +127,11 @@
     - id: skill-manager
       name: '@deepseek-ai/dsh-host-skill-manager'
 
+    # Configured MCP servers with live status, add, switch, and remove, and
+    # MCP Registry search for the MCP page, over the `mcpManager` Remote.
+    - id: mcp-manager
+      name: '@deepseek-ai/dsh-host-mcp-manager'
+
     # Session commands, cold reads, and live control over Typert Remote.
     - id: session-controller
       name: '@deepseek-ai/dsh-api-session-controller'
@@ -313,6 +318,11 @@
     # switches, skill authoring, and remote sources.
     - id: ui-skill-library
       name: '@deepseek-ai/dsh-client-ui-skill-library'
+
+    # MCP page below Skills in the sidebar: configured servers with live
+    # status and tools, custom servers, and MCP Registry search.
+    - id: ui-mcp-library
+      name: '@deepseek-ai/dsh-client-ui-mcp-library'
 
     - id: ui-conversation
       name: '@deepseek-ai/dsh-client-ui-conversation'

@@ -236,6 +236,40 @@ describe('reconnect supervisor', () => {
     expect(mockConnect).toHaveBeenCalledTimes(3)
   })
 
+  it('reports connecting, connected with tools, reconnecting with the failure, failed at the cap, and stopped', async () => {
+    captureLogs(ctx)
+    const config = stdioConfig({ initialDelayMs: 2, maxDelayMs: 8, maxAttempts: 1 })
+    const handle = startConnection(ctx, config, resolveReconnectPolicy(config.reconnect, 'reconnect'))
+    const states: string[] = []
+    const unsubscribe = handle.status.subscribe(() => { states.push(handle.status.snapshot().state) })
+    expect(handle.status.snapshot()).toEqual({ state: 'connecting', tools: [] })
+    await handle.ready
+    await vi.waitFor(() => { expect(handle.status.snapshot().tools).toEqual(['mcp__srv__remote']) })
+    expect(handle.status.snapshot()).toMatchObject({ state: 'connected', connectedAt: expect.any(String) as string })
+
+    mockConnect.mockRejectedValue(new Error('server gone'))
+    instances[0]!.onclose?.()
+    await vi.waitFor(() => { expect(handle.status.snapshot().state).toBe('failed') })
+    expect(states).toContain('reconnecting')
+    expect(handle.status.snapshot()).toMatchObject({ error: 'server gone', attempt: 2, tools: [] })
+    unsubscribe()
+    await handle.dispose()
+    expect(handle.status.snapshot().state).toBe('stopped')
+    expect(states.at(-1)).toBe('failed')
+    await ctx.fiber.dispose()
+  })
+
+  it('reports a failed state when reconnect is disabled and a non-Error rejection as text', async () => {
+    captureLogs(ctx)
+    mockConnect.mockRejectedValueOnce('refused')
+    const config = stdioConfig({ enabled: false })
+    const handle = startConnection(ctx, config, resolveReconnectPolicy(config.reconnect, 'reconnect'))
+    await handle.ready
+    expect(handle.status.snapshot()).toEqual({ state: 'failed', tools: [], error: 'refused' })
+    await handle.dispose()
+    await ctx.fiber.dispose()
+  })
+
   it('gives up behind an in-flight re-sync and removes the generation it publishes', async () => {
     const { errors } = captureLogs(ctx)
     await apply(ctx, stdioConfig({ initialDelayMs: 2, maxDelayMs: 8, maxAttempts: 1 }))

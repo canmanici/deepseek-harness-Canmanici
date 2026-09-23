@@ -84,6 +84,9 @@
       "path": "../../host/skill-manager"
     },
     {
+      "path": "../../host/mcp-manager"
+    },
+    {
       "path": "../account-controller"
     }
   ]

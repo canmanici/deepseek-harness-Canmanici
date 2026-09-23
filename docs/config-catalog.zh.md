@@ -1300,6 +1300,34 @@ export interface Config {
 
 来源： [`packages/host/frontend-static/src/index.ts:30`](../packages/host/frontend-static/src/index.ts)
 
+<a id="deepseek-aidsh-host-mcp-manager"></a>
+
+## `@deepseek-ai/dsh-host-mcp-manager`
+
+需要： `loader` · `typert`
+
+```ts config-catalog
+/** MCP manager configuration. */
+export interface Config {
+  /** MCP Registry base URL. */
+  readonly registryUrl?: string
+  /** Servers per registry page. */
+  readonly pageSize?: number
+  /** Registry request timeout in milliseconds. */
+  readonly fetchTimeoutMs?: number
+  /** Largest accepted registry response in bytes. */
+  readonly maxResponseBytes?: number
+  /**
+   * Working directory of local servers added from the page; empty uses the
+   * user's home directory. A workspace directory can break `npx` launches,
+   * because npx resolves binaries against the enclosing package.
+   */
+  readonly serverCwd?: string
+}
+```
+
+来源： [`packages/host/mcp-manager/src/index.ts:38`](../packages/host/mcp-manager/src/index.ts)
+
 <a id="deepseek-aidsh-host-open-in-app"></a>
 
 ## `@deepseek-ai/dsh-host-open-in-app`
@@ -4313,6 +4341,7 @@ export interface Config {
 - `@deepseek-ai/dsh-client-ui-input-trigger`（[`packages/client/ui-input-trigger/src/index.ts`](../packages/client/ui-input-trigger/src/index.ts)）
 - `@deepseek-ai/dsh-client-ui-jobs`（[`packages/client/ui-jobs/src/index.ts`](../packages/client/ui-jobs/src/index.ts)）
 - `@deepseek-ai/dsh-client-ui-layout`（[`packages/client/ui-layout/src/index.ts`](../packages/client/ui-layout/src/index.ts)）
+- `@deepseek-ai/dsh-client-ui-mcp-library`（[`packages/client/ui-mcp-library/src/index.ts`](../packages/client/ui-mcp-library/src/index.ts)）
 - `@deepseek-ai/dsh-client-ui-message-feedback`（[`packages/client/ui-message-feedback/src/index.ts`](../packages/client/ui-message-feedback/src/index.ts)）
 - `@deepseek-ai/dsh-client-ui-model-selection`（[`packages/client/ui-model-selection/src/index.ts`](../packages/client/ui-model-selection/src/index.ts)）
 - `@deepseek-ai/dsh-client-ui-open-in-app`（[`packages/client/ui-open-in-app/src/index.ts`](../packages/client/ui-open-in-app/src/index.ts)）
@@ -4365,6 +4394,7 @@ export interface Config {
 - `@deepseek-ai/dsh-llm`（[`packages/llm/llm/src/index.ts`](../packages/llm/llm/src/index.ts)）
 - `@deepseek-ai/dsh-lsp`（[`packages/lsp/lsp/src/index.ts`](../packages/lsp/lsp/src/index.ts)）
 - `@deepseek-ai/dsh-mcp-resources` — 需要 `tools`（[`packages/mcp/mcp-resources/src/index.ts`](../packages/mcp/mcp-resources/src/index.ts)）
+- `@deepseek-ai/dsh-mcp-status`（[`packages/mcp/mcp-status/src/index.ts`](../packages/mcp/mcp-status/src/index.ts)）
 - `@deepseek-ai/dsh-sandbox-ssh` — 需要 `ssh`（[`packages/ssh/sandbox-ssh/src/index.ts`](../packages/ssh/sandbox-ssh/src/index.ts)）
 - `@deepseek-ai/dsh-schedule` — 需要 `agents` · `sessions` · `tools` · `sessionPersistence`（[`packages/schedule/schedule/src/index.ts`](../packages/schedule/schedule/src/index.ts)）
 - `@deepseek-ai/dsh-session`（[`packages/core/session/src/index.ts`](../packages/core/session/src/index.ts)）
@@ -4440,6 +4470,7 @@ export interface Config {
 - `@deepseek-ai/dsh-llm-mock-server`（[`packages/test-support/llm-mock-server/src/index.ts`](../packages/test-support/llm-mock-server/src/index.ts)）
 - `@deepseek-ai/dsh-loader-smoke`（[`packages/test-support/loader-smoke/src/index.ts`](../packages/test-support/loader-smoke/src/index.ts)）
 - `@deepseek-ai/dsh-native-command`（[`packages/util/native-command/src/index.ts`](../packages/util/native-command/src/index.ts)）
+- `@deepseek-ai/dsh-open-design`（[`packages/bundle/open-design/src/index.ts`](../packages/bundle/open-design/src/index.ts)）
 - `@deepseek-ai/dsh-output-retention`（[`packages/util/output-retention/src/index.ts`](../packages/util/output-retention/src/index.ts)）
 - `@deepseek-ai/dsh-package-manifest`（[`packages/util/package-manifest/src/index.ts`](../packages/util/package-manifest/src/index.ts)）
 - `@deepseek-ai/dsh-remote-mock`（[`packages/test-support/remote-mock/src/index.ts`](../packages/test-support/remote-mock/src/index.ts)）

@@ -23,6 +23,11 @@ flowchart LR
   pkg_mcp_resources["mcp-resources"]
   svc_mcpResources["ctx.mcpResources<br/>Scoped MCP resource access"]
   pkg_mcp_client["mcp-client"]
+  pkg_mcp_status["mcp-status"]
+  svc_mcpStatus["ctx.mcpStatus<br/>MCP connection status"]
+  pkg_host_mcp_manager["host-mcp-manager"]
+  svc_mcpManager["ctx.mcpManager<br/>MCP management Remote"]
+  pkg_client_ui_mcp_library["client-ui-mcp-library"]
   pkg_browser_use["browser-use"]
   svc_browserUse["ctx.browserUse<br/>Browser-use provider registration"]
   pkg_experimental_browser_use_playwright_mcp["experimental-browser-use-playwright-mcp"]
@@ -340,6 +345,7 @@ flowchart LR
   pkg_host_directory_picker --> svc_directoryPicker
   pkg_host_directory_picker_browse --> svc_directoryPicker
   pkg_host_directory_picker_native --> svc_directoryPicker
+  pkg_host_mcp_manager --> svc_mcpManager
   pkg_host_product_telemetry_otel --> svc_productTelemetry
   pkg_host_skill_manager --> svc_skillManager
   pkg_host_webserver --> svc_webServer
@@ -355,6 +361,7 @@ flowchart LR
   pkg_lsp_stdio --> svc_lsp
   pkg_mcp_client --> svc_mcpResources
   pkg_mcp_resources --> svc_mcpResources
+  pkg_mcp_status --> svc_mcpStatus
   pkg_message_feedback --> svc_messageFeedback
   pkg_office_to_pdf --> svc_officeToPdf
   pkg_permission_presets --> svc_permissionPresets
@@ -484,7 +491,10 @@ flowchart LR
   svc_llm --> pkg_agent_loop
   svc_llm --> pkg_compaction_basic
   svc_lsp --> pkg_tool_lsp
+  svc_mcpManager --> pkg_client_ui_mcp_library
   svc_mcpResources --> pkg_mcp_resources
+  svc_mcpStatus --> pkg_host_mcp_manager
+  svc_mcpStatus --> pkg_mcp_client
   svc_officeToPdf --> pkg_client_ui_sidebar_documentpreview
   svc_pluginManager --> pkg_plugin_manager
   svc_pluginManager --> pkg_ui_settings_plugin_inventory
@@ -590,6 +600,8 @@ flowchart LR
 | `ctx.profileContext` | `core` | [`app-boot`](../packages/boot/app-boot) | - | [`plugin-manager`](../packages/boot/plugin-manager) | - | The dsh launcher supplies data-only profile locations and composition inputs; reload scheduling belongs to dsh-hmr. |
 | `ctx.connection` | `core` | [`client-connection`](../packages/client/connection) | - | [`api-gateway`](../packages/api/gateway), [`host-frontend-static`](../packages/host/frontend-static) | - | Owns browser authentication and shared HTTP request dispatch; API adapters register endpoints and streams. |
 | `ctx.mcpResources` | `seam` | [`mcp-resources`](../packages/mcp/mcp-resources) | [`mcp-client`](../packages/mcp/mcp-client) | [`mcp-resources`](../packages/mcp/mcp-resources) | - | Connection-owned providers serve shared resource tools in the calling agent scope. |
+| `ctx.mcpStatus` | `core` | [`mcp-status`](../packages/mcp/mcp-status) | - | [`mcp-client`](../packages/mcp/mcp-client), [`host-mcp-manager`](../packages/host/mcp-manager) | - | Connection-owned status sources report each server state and tools for management surfaces. |
+| `ctx.mcpManager` | `core` | [`host-mcp-manager`](../packages/host/mcp-manager) | - | [`client-ui-mcp-library`](../packages/client/ui-mcp-library) | - | Projects configured MCP servers with live status for the MCP page, writes them through the plugin manager, and searches the MCP Registry. |
 | `ctx.browserUse` | `seam` | [`browser-use`](../packages/browser-use/browser-use) | [`experimental-browser-use-playwright-mcp`](../packages/experimental/browser-use-playwright-mcp), [`experimental-browser-use-chrome-devtools-mcp`](../packages/experimental/browser-use-chrome-devtools-mcp), [`experimental-browser-use-stagehand-native`](../packages/experimental/browser-use-stagehand-native) | [`experimental-browser-use-playwright-mcp`](../packages/experimental/browser-use-playwright-mcp), [`experimental-browser-use-chrome-devtools-mcp`](../packages/experimental/browser-use-chrome-devtools-mcp), [`experimental-browser-use-stagehand-native`](../packages/experimental/browser-use-stagehand-native) | - | One provider-owned name per service instance. Providers own their tools and browser resources per live Session; the shared service has no browser operation API. |
 | `ctx.computerUse` | `seam` | [`computer-use`](../packages/computer-use/computer-use) | [`experimental-computer-use-cua-driver-mcp`](../packages/experimental/computer-use-cua-driver-mcp), [`experimental-computer-use-cua-driver-native`](../packages/experimental/computer-use-cua-driver-native) | [`experimental-computer-use-cua-driver-mcp`](../packages/experimental/computer-use-cua-driver-mcp), [`experimental-computer-use-cua-driver-native`](../packages/experimental/computer-use-cua-driver-native) | - | One provider-owned name per service instance. Each provider also owns its model tools; the service has no common action API, runtime selection, or Session workflow lock. |
 | `ctx.officeToPdf` | `core` | [`office-to-pdf`](../packages/document/office-to-pdf) | - | [`client-ui-sidebar-documentpreview`](../packages/client/ui-sidebar-documentpreview) | - | Authorized Office bytes are converted on the Host using the declared native target engine, or Node WASM when no native target is declared. |

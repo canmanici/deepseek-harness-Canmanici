@@ -1455,6 +1455,47 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
     ],
   },
   {
+    key: 'mcpManager',
+    summary: 'Remote service behind the MCP page.',
+    description: 'Remote service behind the MCP page. Server rows come from the Loader\'s `dsh-mcp-client` entries, status from `ctx.mcpStatus`, and writes go through `ctx.pluginManager`, which owns the profile patch.',
+    methods: [
+      {
+        signature: '@Remote async servers(): Promise<McpServersValue>',
+        description: 'List configured MCP servers with their live status.',
+        parameters: [],
+        returns: 'servers sorted by name, and whether they can be changed.',
+      },
+      {
+        signature: '@Remote async addServer(request: AddMcpServerRequest): Promise<McpChangeValue>',
+        description: 'Add a server to the profile and connect it.',
+        parameters: [{ name: 'request', description: 'server name and transport settings.' }],
+        returns: 'how the Host applied the change.',
+        throws: ['RemoteError when the plugin manager is not mounted, the name is taken, or the settings are invalid.'],
+      },
+      {
+        signature: '@Remote async setServerEnabled(request: SetMcpServerEnabledRequest): Promise<McpChangeValue>',
+        description: 'Switch one server on or off.',
+        parameters: [{ name: 'request', description: 'entry id and target enablement.' }],
+        returns: 'how the Host applied the change.',
+        throws: ['RemoteError when the plugin manager is not mounted or the entry cannot change.'],
+      },
+      {
+        signature: '@Remote async removeServer(request: McpServerRequest): Promise<McpChangeValue>',
+        description: 'Remove a server the profile defines.',
+        parameters: [{ name: 'request', description: 'entry id.' }],
+        returns: 'how the Host applied the change.',
+        throws: ['RemoteError when the plugin manager is not mounted or the profile does not define the server.'],
+      },
+      {
+        signature: '@Remote async searchRegistry(request: SearchMcpRegistryRequest): Promise<SearchMcpRegistryValue>',
+        description: 'Search the MCP Registry for the latest version of each server.',
+        parameters: [{ name: 'request', description: 'query and optional cursor.' }],
+        returns: 'servers with their supported run options and the next cursor.',
+        throws: ['RemoteError when the registry cannot be reached or answers with invalid data.'],
+      },
+    ],
+  },
+  {
     key: 'mcpResources',
     summary: 'Scoped resource access plus three tools shared by configured MCP servers.',
     description: 'Scoped resource access plus three tools shared by configured MCP servers.',
@@ -1464,6 +1505,25 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         description: 'Register one server and expose resource tools while that scope has providers.',
         parameters: [{ name: 'server', description: 'configured server name, unique in this scope.' }, { name: 'provider', description: 'connection-owned resource operations.' }],
         returns: 'the effect disposer for this exact registration.',
+      },
+    ],
+  },
+  {
+    key: 'mcpStatus',
+    summary: 'Registry of live MCP server status sources.',
+    description: 'Registry of live MCP server status sources.',
+    methods: [
+      {
+        signature: 'register(server: string, source: McpStatusSource): () => void',
+        description: 'Register one server\'s status source for the lifetime of the calling context.',
+        parameters: [{ name: 'server', description: 'configured server name.' }, { name: 'source', description: 'the connection\'s status source.' }],
+        returns: 'the effect disposer that removes the registration.',
+      },
+      {
+        signature: 'list(): McpServerStatus[]',
+        description: 'List every registered server with its current status.',
+        parameters: [],
+        returns: 'statuses sorted by server name.',
       },
     ],
   },
@@ -1620,6 +1680,18 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         description: 'Persist a plugin entry\'s desired enablement and apply it on live profiles.',
         parameters: [{ name: 'id', description: 'Loader entry identity returned by listPlugins.' }, { name: 'enabled', description: 'Whether the plugin should run.' }],
         returns: 'Saved and runtime outcomes, including higher-priority overrides.',
+      },
+      {
+        signature: 'addEntry(entry: { id: string; name: string; config: Record<string, unknown> }): Promise<ChangeResult>',
+        description: 'Add one plugin entry to the profile patch and apply it on live profiles. Host-side only; management surfaces that own a plugin family, such as MCP servers, call it with a validated config.',
+        parameters: [{ name: 'entry', description: 'Unique entry id, module name, and config.' }],
+        returns: 'Saved and runtime outcomes.',
+      },
+      {
+        signature: 'removeEntry(id: string, name: string): Promise<ChangeResult>',
+        description: 'Remove one plugin entry that the profile patch defines and apply it on live profiles. Host-side only.',
+        parameters: [{ name: 'id', description: 'Composition entry id.' }, { name: 'name', description: 'Module name the defining row carries.' }],
+        returns: 'Saved and runtime outcomes; `failed` when the profile patch does not define the entry.',
       },
       {
         signature: '@Remote setBundleEnabled(name: string, enabled: boolean): Promise<ChangeResult>',
@@ -4223,6 +4295,22 @@ export const EVENT_API: readonly EventApiEntry[] = [
     parameters: [{ name: 'options', description: 'the full request. A LOOP-built request carries the process-local {@link markAgentLoopRequest} identity and arrives deep-frozen (mutation throws): its content is a pure function of the session log (the reconstructability Agent Note), so listeners read it, never rewrite it. Hand-built calls do not carry that marker; callers own their request inputs and must keep them unchanged until the stream settles.' }],
   },
   {
+    name: 'mcp-manager/changed',
+    mode: 'emit',
+    signature: '\'mcp-manager/changed\'(): void',
+    summary: 'The MCP server list or a server\'s connection status changed; management clients refetch their view.',
+    description: 'The MCP server list or a server\'s connection status changed; management clients refetch their view.',
+    parameters: [],
+  },
+  {
+    name: 'mcp-status/change',
+    mode: 'emit',
+    signature: '\'mcp-status/change\'(): void',
+    summary: 'An MCP server registered, unregistered, or changed its connection status.',
+    description: 'An MCP server registered, unregistered, or changed its connection status.',
+    parameters: [],
+  },
+  {
     name: 'permission-presets/catalog-changed',
     mode: 'emit',
     signature: '\'permission-presets/catalog-changed\'(): void',
@@ -4549,6 +4637,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'AdapterRegistrationHandle',
     declaration: 'export interface AdapterRegistrationHandle {\n    (): void;\n    replace(providers: string[]): void;\n}',
+  },
+  {
+    name: 'AddMcpServerRequest',
+    declaration: 'export interface AddMcpServerRequest {\n    readonly serverName: string;\n    readonly transport: McpTransport;\n    readonly command?: string;\n    readonly args?: readonly string[];\n    readonly env?: Readonly<Record<string, string>>;\n    readonly url?: string;\n    readonly headers?: Readonly<Record<string, string>>;\n}',
   },
   {
     name: 'AdmittedPromptContentPart',
@@ -5727,6 +5819,14 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export type ManagedMarketplaceKind = \'github\' | \'claude-plugins-dev\' | \'skillsmp\' | \'skills-sh\';',
   },
   {
+    name: 'ManagedMcpServer',
+    declaration: 'export interface ManagedMcpServer {\n    readonly entryId: string;\n    readonly serverName: string;\n    readonly transport: McpTransport;\n    readonly command?: string;\n    readonly args?: readonly string[];\n    readonly url?: string;\n    readonly envNames: readonly string[];\n    readonly headerNames: readonly string[];\n    readonly enabled: boolean;\n    readonly manageable: boolean;\n    readonly state: ManagedMcpState;\n    readonly tools: readonly string[];\n    readonly error?: string;\n    readonly attempt?: number;\n}',
+  },
+  {
+    name: 'ManagedMcpState',
+    declaration: 'export type ManagedMcpState = \'connecting\' | \'connected\' | \'reconnecting\' | \'failed\' | \'stopped\' | \'disabled\';',
+  },
+  {
     name: 'ManagedProject',
     declaration: 'export interface ManagedProject {\n    readonly root: string;\n    readonly title: string;\n}',
   },
@@ -5783,12 +5883,56 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export interface MarketplaceView {\n    readonly id: string;\n    readonly title: string;\n    readonly kind: MarketplaceKind;\n    readonly url: string;\n    readonly enabled: boolean;\n    readonly browsable: boolean;\n    readonly available?: number;\n    readonly error?: string;\n}',
   },
   {
+    name: 'McpChangeValue',
+    declaration: 'export interface McpChangeValue {\n    readonly application: \'applied\' | \'restart-required\' | \'overridden\';\n    readonly warnings: readonly string[];\n}',
+  },
+  {
+    name: 'McpConnectionState',
+    declaration: 'export type McpConnectionState = \'connecting\' | \'connected\' | \'reconnecting\' | \'failed\' | \'stopped\';',
+  },
+  {
+    name: 'McpConnectionStatus',
+    declaration: 'export interface McpConnectionStatus {\n    readonly state: McpConnectionState;\n    readonly tools: readonly string[];\n    readonly error?: string;\n    readonly attempt?: number;\n    readonly connectedAt?: string;\n}',
+  },
+  {
+    name: 'McpRegistryInput',
+    declaration: 'export interface McpRegistryInput {\n    readonly name: string;\n    readonly target: \'env\' | \'header\';\n    readonly description?: string;\n    readonly required: boolean;\n    readonly secret: boolean;\n    readonly value?: string;\n}',
+  },
+  {
+    name: 'McpRegistryOption',
+    declaration: 'export interface McpRegistryOption {\n    readonly kind: \'npm\' | \'pypi\' | \'oci\' | \'remote\';\n    readonly transport: McpTransport;\n    readonly command?: string;\n    readonly args?: readonly string[];\n    readonly url?: string;\n    readonly inputs: readonly McpRegistryInput[];\n}',
+  },
+  {
+    name: 'McpRegistryServer',
+    declaration: 'export interface McpRegistryServer {\n    readonly name: string;\n    readonly title?: string;\n    readonly description: string;\n    readonly version: string;\n    readonly repository?: string;\n    readonly websiteUrl?: string;\n    readonly suggestedName: string;\n    readonly options: readonly McpRegistryOption[];\n    readonly installed: boolean;\n}',
+  },
+  {
     name: 'McpResourceProvider',
     declaration: 'export interface McpResourceProvider {\n    request(request: McpResourceRequest, exec: ToolExecution): Promise<JsonValue>;\n}',
   },
   {
     name: 'McpResourceRequest',
     declaration: 'export type McpResourceRequest = {\n    method: \'resources/list\' | \'resources/templates/list\';\n    cursor?: string;\n} | {\n    method: \'resources/read\';\n    uri: string;\n};',
+  },
+  {
+    name: 'McpServerRequest',
+    declaration: 'export interface McpServerRequest {\n    readonly entryId: string;\n}',
+  },
+  {
+    name: 'McpServerStatus',
+    declaration: 'export interface McpServerStatus extends McpConnectionStatus {\n    readonly server: string;\n}',
+  },
+  {
+    name: 'McpServersValue',
+    declaration: 'export interface McpServersValue {\n    readonly servers: readonly ManagedMcpServer[];\n    readonly manageable: boolean;\n}',
+  },
+  {
+    name: 'McpStatusSource',
+    declaration: 'export interface McpStatusSource {\n    snapshot(): McpConnectionStatus;\n    subscribe(listener: () => void): () => void;\n}',
+  },
+  {
+    name: 'McpTransport',
+    declaration: 'export type McpTransport = \'stdio\' | \'streamable-http\';',
   },
   {
     name: 'Message',
@@ -6403,6 +6547,14 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export interface SearchMatchesResultView {\n    card: \'search\';\n    shape: \'matches\';\n    title?: string;\n    files: SearchFileMatches[];\n    truncated: boolean;\n    total: number;\n}',
   },
   {
+    name: 'SearchMcpRegistryRequest',
+    declaration: 'export interface SearchMcpRegistryRequest {\n    readonly query: string;\n    readonly cursor?: string;\n}',
+  },
+  {
+    name: 'SearchMcpRegistryValue',
+    declaration: 'export interface SearchMcpRegistryValue {\n    readonly servers: readonly McpRegistryServer[];\n    readonly nextCursor?: string;\n}',
+  },
+  {
     name: 'SearchPathsResultView',
     declaration: 'export interface SearchPathsResultView {\n    card: \'search\';\n    shape: \'paths\';\n    title?: string;\n    paths: string[];\n    truncated: boolean;\n    total: number;\n}',
   },
@@ -6941,6 +7093,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'SessionWorkspacePathApplication',
     declaration: 'export type SessionWorkspacePathApplication = NativeFileApplication;',
+  },
+  {
+    name: 'SetMcpServerEnabledRequest',
+    declaration: 'export interface SetMcpServerEnabledRequest {\n    readonly entryId: string;\n    readonly enabled: boolean;\n}',
   },
   {
     name: 'SetSkillSourceEnabledRequest',

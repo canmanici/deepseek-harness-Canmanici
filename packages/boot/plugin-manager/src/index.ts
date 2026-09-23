@@ -21,7 +21,7 @@ import { bundleManifest, readProfileRegistry, registryArguments, runProfilePnpm,
 import { classifyInstallFailure } from './install-failure.ts'
 import { InvalidInstallSpecError, parseInstallSpec, type ParsedInstallSpec } from './install-spec.ts'
 import { attributeFailure, normalizeRegistry, NPMMIRROR_REGISTRY, registryPlan } from './registry.ts'
-import { writePluginEnabled } from './patch.ts'
+import { appendPluginEntry, removePluginEntry, writePluginEnabled } from './patch.ts'
 import { ManagementFailure } from './failure.ts'
 import { approveBuilds, readPendingBuilds } from './build-approval.ts'
 import type {
@@ -390,6 +390,30 @@ export class PluginManager extends TypertRemoteService {
       const current = (await this.listPlugins()).find(item => item.entryId === id)
       return current?.enabled !== enabled && this.ownerContext.get('hmr') !== undefined ? 'overridden' : undefined
     }), { stage: 'enable', target: id, enabled }, 'plugin')
+  }
+
+  /** Add one plugin entry to the profile patch and apply it on live profiles. Host-side only; management
+   * surfaces that own a plugin family, such as MCP servers, call it with a validated config.
+   * @param entry Unique entry id, module name, and config.
+   * @returns Saved and runtime outcomes.
+   */
+  addEntry(entry: { id: string; name: string; config: Record<string, unknown> }): Promise<ChangeResult> {
+    return this.change(result => this.configure(async () => {
+      await appendPluginEntry(this.profile.patchPath, entry)
+      result.warnings = await this.reload([entry.id])
+    }), { stage: 'enable', target: entry.id, enabled: true }, 'plugin')
+  }
+
+  /** Remove one plugin entry that the profile patch defines and apply it on live profiles. Host-side only.
+   * @param id Composition entry id.
+   * @param name Module name the defining row carries.
+   * @returns Saved and runtime outcomes; `failed` when the profile patch does not define the entry.
+   */
+  removeEntry(id: string, name: string): Promise<ChangeResult> {
+    return this.change(result => this.configure(async () => {
+      if (!await removePluginEntry(this.profile.patchPath, id, name)) throw new ManagementFailure('unaddressable')
+      result.warnings = await this.reload()
+    }), { stage: 'enable', target: id, enabled: false }, 'plugin')
   }
 
   /** Select or remove a bundle layer while retaining installed dependencies.

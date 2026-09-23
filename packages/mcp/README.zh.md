@@ -28,6 +28,7 @@ kind: "package-group"
 |---|---|
 | [`mcp-client/`](mcp-client/README.zh.md) | 连接一台 MCP 服务器，暴露其工具与指令，并提供其资源操作 |
 | [`mcp-resources/`](mcp-resources/README.zh.md) | 通过显式选择服务器的共享工具发现和读取资源 |
+| [`mcp-status/`](mcp-status/README.zh.md) | 为管理界面保存每个已配置服务器的实时连接状态 |
 
 -----
 

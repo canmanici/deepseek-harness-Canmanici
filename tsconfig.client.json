@@ -124,6 +124,7 @@
     { "path": "./packages/client/ui-plugin-manager/tsconfig.client.json" },
     { "path": "./packages/client/ui-settings-plugin-inventory" },
     { "path": "./packages/client/ui-skill-library" },
+    { "path": "./packages/client/ui-mcp-library" },
     { "path": "./packages/client/locale/tsconfig.client.json" },
     { "path": "./packages/client/ui-renderer" },
     { "path": "./packages/client/ui-session" },
