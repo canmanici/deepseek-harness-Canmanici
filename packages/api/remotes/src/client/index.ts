@@ -13,6 +13,7 @@ import pluginManagerRemote from '@deepseek-ai/dsh-plugin-manager/remote'
 import pluginRegistryProbeRemote from '@deepseek-ai/dsh-client-ui-plugin-manager/remote'
 import pluginInventoryRemote from '@deepseek-ai/dsh-host-plugin-inventory/remote'
 import skillManagerRemote from '@deepseek-ai/dsh-host-skill-manager/remote'
+import mcpManagerRemote from '@deepseek-ai/dsh-host-mcp-manager/remote'
 import messageFeedbackRemote from '@deepseek-ai/dsh-message-feedback/remote'
 import permissionPresetsRemote from '@deepseek-ai/dsh-permission-presets/remote'
 import sessionFeedbackRemote from '@deepseek-ai/dsh-command-feedback/remote'
@@ -39,6 +40,10 @@ export type {
   ManagedMarketplace, ManagedProject, ManagedSkill, ManagedSource, ManagedSourceSkill, MarketplaceEntry, SkillDraft,
   SkillInventoryValue as SkillManagerInventory, SearchMarketplaceValue,
 } from '@deepseek-ai/dsh-host-skill-manager/types'
+export type {
+  AddMcpServerRequest, ManagedMcpServer, McpChangeValue, McpRegistryInput, McpRegistryOption, McpRegistryServer,
+  McpServersValue, SearchMcpRegistryValue,
+} from '@deepseek-ai/dsh-host-mcp-manager/types'
 export type {} from '@deepseek-ai/dsh-agent-preset-registry/remote'
 export type {} from '@deepseek-ai/dsh-commands/remote'
 export type {} from '@deepseek-ai/dsh-api-settings-controller/remote'
@@ -48,6 +53,7 @@ export type {} from '@deepseek-ai/dsh-office-to-pdf/remote'
 export type {} from '@deepseek-ai/dsh-llm/remote'
 export type {} from '@deepseek-ai/dsh-host-plugin-inventory/remote'
 export type {} from '@deepseek-ai/dsh-host-skill-manager/remote'
+export type {} from '@deepseek-ai/dsh-host-mcp-manager/remote'
 export type {} from '@deepseek-ai/dsh-message-feedback/remote'
 export type {} from '@deepseek-ai/dsh-permission-presets/remote'
 export type {} from '@deepseek-ai/dsh-command-feedback/remote'
@@ -179,7 +185,7 @@ export async function apply(ctx: Context): Promise<() => Promise<void>> {
   try {
     for (const contribution of [
       agentPresetsRemote, commandsRemote, settingsControllerRemote, accountRemote, goalsRemote, llmRemote, dynamicRemote,
-      pluginInventoryRemote, skillManagerRemote, pluginManagerRemote, pluginRegistryProbeRemote,
+      pluginInventoryRemote, skillManagerRemote, mcpManagerRemote, pluginManagerRemote, pluginRegistryProbeRemote,
       messageFeedbackRemote, sessionFeedbackRemote,
       fileUploadsRemote, sessionReferencesRemote,
       permissionPresetsRemote, subagentsRemote, sessionRemote, jobRemote, workspaceRemote, workspaceFilesRemote, terminalRemote,

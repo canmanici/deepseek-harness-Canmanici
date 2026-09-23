@@ -37,6 +37,8 @@ kind: "package-reference"
   disabled: false
 ```
 
+拥有某一类插件的宿主端调用方，例如 MCP 页面的 [mcp-manager](../../host/mcp-manager/README.zh.md)，调用 `addEntry({ id, name, config })` 把新条目插入 profile patch，调用 `removeEntry(id, name)` 移除 profile patch 插入的条目及其覆盖项；二者像开关一样实时应用，且不是 Remote 方法。
+
 插件开关只更新 profile 的 `cordis.patch.yml` 中最后一条匹配覆盖项的 `disabled`；没有匹配项时追加。匹配依据是条目 id，以及覆盖项声明的模块名称。组合包开关修改 `package.json` 的有序 `dsh.profile.bundles` 列表。关闭保留依赖；开启追加到列表末尾，可能改变配置优先级。安装新组合包默认启用。home 和单次启动 patch 保留更高优先级。
 
 已选择但无法加载的组合包仍会出现在 `listBundles` 中，并携带 `error`；`enabled` 表示保存的选择，不代表加载成功。插件页面显示错误并允许取消选择。损坏的组合包无法启用。管理组合包的文件变得不可读后仍受保护。

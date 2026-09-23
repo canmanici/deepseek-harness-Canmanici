@@ -4,6 +4,7 @@ import SystemPrompt, { renderPrompt } from '@deepseek-ai/dsh-system-prompt'
 import ToolRuntime from '@deepseek-ai/dsh-tools'
 import { ToolCallId } from '@deepseek-ai/dsh-llm'
 import McpResources from '@deepseek-ai/dsh-mcp-resources'
+import McpStatus from '@deepseek-ai/dsh-mcp-status'
 import { createScope } from '@deepseek-ai/dsh-scope'
 import { registerServerContext } from '../src/server-context.ts'
 
@@ -19,6 +20,8 @@ async function setup() {
   return ctx
 }
 
+const status = { snapshot: () => ({ state: 'connected' as const, tools: ['mcp__docs__read'] }), subscribe: () => () => {} }
+
 describe('MCP server context', () => {
   it('publishes literal instructions and withdraws the prompt and resource provider together', async () => {
     const ctx = await setup()
@@ -27,6 +30,7 @@ describe('MCP server context', () => {
       registerServerContext(inner, 'docs', {
         resources: { request: async () => ({ resources: [] }) },
         instructions: () => instructions,
+        status,
       })
     } })
     expect(renderPrompt(await ctx.systemPrompt.assemble())).toContain(instructions)
@@ -49,9 +53,33 @@ describe('MCP server context', () => {
       registerServerContext(scoped.ctx, 'private', {
         resources: { request: async () => ({ resources: [] }) },
         instructions: () => 'Private server instructions.',
+        status,
       })
     } })
     expect(renderPrompt(await ctx.systemPrompt.assemble({ scope: scopeKey }))).toContain('Private server instructions.')
     expect(renderPrompt(await ctx.systemPrompt.assemble())).not.toContain('Private server instructions.')
+  })
+
+  it('reports connection status while the status registry is mounted, including one mounted later', async () => {
+    const ctx = await setup()
+    let listener: () => void = () => {}
+    const source = {
+      snapshot: () => ({ state: 'connecting' as const, tools: [] }),
+      subscribe: (next: () => void) => {
+        listener = next
+        return () => { listener = () => {} }
+      },
+    }
+    const fiber = await ctx.plugin({ apply(inner: Context) {
+      registerServerContext(inner, 'late', { resources: { request: async () => ({ resources: [] }) }, instructions: () => '', status: source })
+    } })
+    await ctx.plugin(McpStatus)
+    const changes: number[] = []
+    ctx.on('mcp-status/change', () => { changes.push(1) })
+    expect(ctx.mcpStatus.list()).toEqual([{ server: 'late', state: 'connecting', tools: [] }])
+    listener()
+    expect(changes).toHaveLength(1)
+    await fiber.dispose()
+    expect(ctx.mcpStatus.list()).toEqual([])
   })
 })

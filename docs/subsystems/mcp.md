@@ -31,6 +31,8 @@ MCP servers are opt-in. Configure one `@deepseek-ai/dsh-mcp-client` entry per se
 | Server instruction size limit | Client `maxInstructionBytes`; the composition supplies [system-prompt assembly](system-prompt.md) |
 | Permission decisions and supported image output | [Tool execution](tools.md) and [attachments](attachment.md) |
 
+In Web and Desktop, the sidebar **MCP** page ([ui-mcp-library](../../packages/client/ui-mcp-library/README.md)) adds client entries to the profile by hand or from the official MCP Registry, switches and removes them, and shows each server's live state and tools. The [mcp-manager](../../packages/host/mcp-manager/README.md) Remote writes entries through the plugin manager and reads status from [dsh-mcp-status](../../packages/mcp/mcp-status/README.md), where every client reports its connection.
+
 Protocol negotiation follows the SDK's supported revisions; there is no product setting that forces a protocol revision. The [configuration catalog](../config-catalog.md#deepseek-aidsh-mcp-client) lists accepted client fields and defaults.
 
 -----
@@ -119,6 +121,54 @@ MCP prompt templates, human-input elicitation, task-based execution, and resourc
 
 Generated from source by `scripts/gen-cordis-catalog.ts` (verified fresh by `pnpm run verify-cordis-catalog` in doc-sync; regenerate with `pnpm run gen-cordis-catalog`) — the language sides differ only in locale-specific paired document paths. Signature blocks use a `ts cordis-catalog` fence and keep the original source JSDoc; dispatch modes are defined in the [primer](../cordis-primer.md#dispatch-modes), and the framework-inherited `ctx` API lives in [cordis-api/inherited.md](../cordis-api/inherited.md).
 
+<a id="ctxmcpmanager--mcpmanager"></a>
+
+### `ctx.mcpManager` — `McpManager`
+
+Remote service behind the MCP page. Server rows come from the Loader's `dsh-mcp-client` entries, status from `ctx.mcpStatus`, and writes go through `ctx.pluginManager`, which owns the profile patch.
+
+```ts cordis-catalog
+/**
+ * List configured MCP servers with their live status.
+ * @returns servers sorted by name, and whether they can be changed.
+ */
+@Remote async servers(): Promise<McpServersValue>
+
+/**
+ * Add a server to the profile and connect it.
+ * @param request - server name and transport settings.
+ * @returns how the Host applied the change.
+ * @throws RemoteError when the plugin manager is not mounted, the name is taken, or the settings are invalid.
+ */
+@Remote async addServer(request: AddMcpServerRequest): Promise<McpChangeValue>
+
+/**
+ * Switch one server on or off.
+ * @param request - entry id and target enablement.
+ * @returns how the Host applied the change.
+ * @throws RemoteError when the plugin manager is not mounted or the entry cannot change.
+ */
+@Remote async setServerEnabled(request: SetMcpServerEnabledRequest): Promise<McpChangeValue>
+
+/**
+ * Remove a server the profile defines.
+ * @param request - entry id.
+ * @returns how the Host applied the change.
+ * @throws RemoteError when the plugin manager is not mounted or the profile does not define the server.
+ */
+@Remote async removeServer(request: McpServerRequest): Promise<McpChangeValue>
+
+/**
+ * Search the MCP Registry for the latest version of each server.
+ * @param request - query and optional cursor.
+ * @returns servers with their supported run options and the next cursor.
+ * @throws RemoteError when the registry cannot be reached or answers with invalid data.
+ */
+@Remote async searchRegistry(request: SearchMcpRegistryRequest): Promise<SearchMcpRegistryValue>
+```
+
+Source: [`packages/host/mcp-manager/src/index.ts`](../../packages/host/mcp-manager/src/index.ts)
+
 <a id="ctxmcpresources--mcpresourceruntime"></a>
 
 ### `ctx.mcpResources` — `McpResourceRuntime`
@@ -136,4 +186,69 @@ register(server: string, provider: McpResourceProvider): () => void
 ```
 
 Source: [`packages/mcp/mcp-resources/src/index.ts`](../../packages/mcp/mcp-resources/src/index.ts)
+
+<a id="ctxmcpstatus--mcpstatusregistry"></a>
+
+### `ctx.mcpStatus` — `McpStatusRegistry`
+
+Registry of live MCP server status sources.
+
+```ts cordis-catalog
+/**
+ * Register one server's status source for the lifetime of the calling context.
+ * @param server - configured server name.
+ * @param source - the connection's status source.
+ * @returns the effect disposer that removes the registration.
+ */
+register(server: string, source: McpStatusSource): () => void
+
+/**
+ * List every registered server with its current status.
+ * @returns statuses sorted by server name.
+ */
+list(): McpServerStatus[]
+```
+
+Source: [`packages/mcp/mcp-status/src/index.ts`](../../packages/mcp/mcp-status/src/index.ts)
+
+<a id="mcp-manager-events"></a>
+
+### `mcp-manager/*` events
+
+<a id="mcp-managerchanged--emit"></a>
+
+#### `mcp-manager/changed` — emit
+
+The MCP server list or a server's connection status changed; management clients refetch their view.
+
+```ts cordis-catalog
+/**
+ * The MCP server list or a server's connection status changed; management
+ * clients refetch their view.
+ * @mode emit
+ */
+'mcp-manager/changed'(): void
+```
+
+Source: [`packages/host/mcp-manager/src/types.ts`](../../packages/host/mcp-manager/src/types.ts)
+
+<a id="mcp-status-events"></a>
+
+### `mcp-status/*` events
+
+<a id="mcp-statuschange--emit"></a>
+
+#### `mcp-status/change` — emit
+
+An MCP server registered, unregistered, or changed its connection status.
+
+```ts cordis-catalog
+/**
+ * An MCP server registered, unregistered, or changed its connection status.
+ * @mode emit
+ */
+'mcp-status/change'(): void
+```
+
+Source: [`packages/mcp/mcp-status/src/index.ts`](../../packages/mcp/mcp-status/src/index.ts)
 <!-- END GENERATED cordis-surface -->

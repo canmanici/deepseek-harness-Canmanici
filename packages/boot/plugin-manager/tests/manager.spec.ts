@@ -273,6 +273,18 @@ it('turns a plugin off and on without duplicating patch overrides', async () => 
   expect(readFileSync(join(dir, 'cordis.patch.yml'), 'utf8').match(/id: managed/g)).toHaveLength(1)
 })
 
+it('adds a plugin entry to the profile, applies it live, and removes only entries the profile defines', async () => {
+  const { manager, dir, ctx } = await fixture()
+  expect(await manager.addEntry({ id: 'added', name: 'extra/plugin.mjs', config: { service: 'addedProbe' } })).toMatchObject({ changed: true, application: 'applied' })
+  await vi.waitFor(() => { expect(ctx.get('addedProbe')).toBe(true) })
+  expect(readFileSync(join(dir, 'cordis.patch.yml'), 'utf8')).toContain('id: added')
+  expect(await manager.addEntry({ id: 'added', name: 'extra/plugin.mjs', config: {} })).toMatchObject({ changed: false, application: 'failed' })
+  expect(await manager.removeEntry('managed', './plugin.mjs')).toMatchObject({ changed: false, application: 'failed', error: { code: 'unaddressable' } })
+  expect(await manager.removeEntry('added', 'extra/plugin.mjs')).toMatchObject({ changed: true, application: 'applied' })
+  await vi.waitFor(() => { expect(ctx.get('addedProbe')).toBeUndefined() })
+  expect(readFileSync(join(dir, 'cordis.patch.yml'), 'utf8')).not.toContain('id: added')
+})
+
 it('retains installed dependencies when toggling a bundle and appends it when re-enabled', async () => {
   const { manager, dir, bundle } = await fixture()
   bundle('third', [])

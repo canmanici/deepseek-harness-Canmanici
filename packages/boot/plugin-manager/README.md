@@ -37,6 +37,8 @@ For a deployment without agent presets, enable the tool in the profile patch. Pr
   disabled: false
 ```
 
+Host-side callers that own a plugin family, such as the MCP page's [mcp-manager](../../host/mcp-manager/README.md), call `addEntry({ id, name, config })` to insert a new entry into the profile patch and `removeEntry(id, name)` to remove an entry the profile patch inserted, with its overrides; both apply live like a toggle and are not Remote methods.
+
 A plugin toggle updates only `disabled` in the last matching override in the profile's `cordis.patch.yml`, or appends an override when none matches. Matching uses the entry id and any module-name assertion. A bundle toggle changes `package.json`'s ordered `dsh.profile.bundles` list. Disabling retains the dependency; enabling appends the bundle at the end, which can change configuration precedence. Installation enables a new bundle by default. Home and invocation patches retain their higher priority.
 
 A selected bundle that cannot load remains in `listBundles` with an `error`; `enabled` records the saved selection, not successful loading. The plugin page shows the error and allows deselection. A broken bundle cannot be enabled. Management bundles remain protected if their files become unreadable.

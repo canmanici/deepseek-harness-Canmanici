@@ -510,6 +510,10 @@
     - id: mcp-resources
       name: '@deepseek-ai/dsh-mcp-resources'
 
+    # Live connection status that configured MCP servers report for the MCP page.
+    - id: mcp-status
+      name: '@deepseek-ai/dsh-mcp-status'
+
     # ── rows every mode mounts, whose values each overlay may state ──────────────
 
     # The tool registry. Presentation mode is a deployment choice; omitting it here
