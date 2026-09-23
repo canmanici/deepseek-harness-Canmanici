@@ -130,6 +130,19 @@ interface ResolvedWatchConfig {
   followSymlinks: boolean
 }
 
+declare module '@deepseek-ai/cordis' {
+  interface Events {
+    /**
+     * A trusted Host writer, such as the Skills page editor, created,
+     * changed, or deleted a file that may be a skill. Providers whose roots
+     * contain the path invalidate the catalog without waiting for a watcher.
+     * @param path - absolute path of the changed file.
+     * @mode emit
+     */
+    'skill-filesystem/changed'(path: string): void
+  }
+}
+
 /** Register the local filesystem skill provider on `ctx.skills`. */
 export function apply(ctx: Context, config: Config = {}): void {
   let provider!: FileSystemSkillProvider
@@ -144,6 +157,20 @@ export function apply(ctx: Context, config: Config = {}): void {
     if (mutationToolName(actor) === undefined) return
     provider.observeHostMutation(target.displayPath)
   })
+  ctx.on('skill-filesystem/changed', (path) => { provider.observeHostMutation(path) })
+}
+
+/**
+ * Resolve the project root that project skill roots and per-project skill
+ * preferences key on: the nearest ancestor of `cwd` containing `.git`, or
+ * `cwd` itself when none exists. Probes go through `ctx.fs` when that service
+ * is available.
+ * @param ctx - context whose optional `fs` service performs the probes.
+ * @param cwd - workspace directory of the lookup.
+ * @returns the absolute project root.
+ */
+export async function resolveSkillProjectRoot(ctx: Context, cwd: string): Promise<string> {
+  return await findProjectRoot(resolve(cwd), optionalFileSystem(ctx))
 }
 
 /** Provider that maps local project/user skill roots into `ctx.skills`. */
@@ -245,7 +272,7 @@ export class FileSystemSkillProvider implements SkillProvider {
   private async roots(cwd: string | undefined): Promise<SkillRoot[]> {
     const roots: SkillRoot[] = []
     if (this.includeDefaultRoots && cwd !== undefined) {
-      const projectRoot = await findProjectRoot(resolve(cwd), optionalFileSystem(this.ctx))
+      const projectRoot = await resolveSkillProjectRoot(this.ctx, cwd)
       roots.push(
         { path: join(projectRoot, '.dsh/skills'), source: 'project-dsh', rank: PROJECT_DSH_RANK, projectRoot },
         { path: join(projectRoot, '.agents/skills'), source: 'project-agents', rank: PROJECT_AGENTS_RANK, projectRoot },
@@ -800,33 +827,55 @@ async function parseSkillFile(path: string, ctx: Context, signal?: AbortSignal, 
   if (raw === undefined) {
     return undefined
   }
+  try {
+    return { ...parseSkillDocument(raw.content), path: raw.path }
+  } catch (error) {
+    ctx.logger.warn(`skill file ${path} ignored: ${errorMessage(error)}`)
+    return undefined
+  }
+}
+
+/** A validated `SKILL.md` document. */
+export interface SkillDocument {
+  /** Kebab-case skill name from frontmatter. */
+  readonly name: string
+  /** Routing description from frontmatter. */
+  readonly description: string
+  /** Optional `whenToUse` guidance from frontmatter. */
+  readonly whenToUse?: string
+  /** Invocation controls from `disable-model-invocation` and `user-invocable`. */
+  readonly invocation: SkillInvocationPolicy
+  /** Optional `metadata` object from frontmatter. */
+  readonly metadata?: Record<string, unknown>
+  /** Trimmed Markdown body after the frontmatter. */
+  readonly content: string
+}
+
+/**
+ * Parse and validate `SKILL.md` text with the rules local discovery applies:
+ * YAML frontmatter must carry a kebab-case `name` and a `description`, and the
+ * invocation keys must be the kebab-case boolean fields.
+ * @param raw - complete file text.
+ * @returns the validated document.
+ * @throws Error naming the first rule the text violates.
+ */
+export function parseSkillDocument(raw: string): SkillDocument {
   let parsed
   try {
-    parsed = parseFrontmatter(raw.content)
+    parsed = parseFrontmatter(raw)
   } catch (error) {
-    ctx.logger.warn(`skill file ${path} ignored: invalid YAML frontmatter: ${errorMessage(error)}`)
-    return undefined
+    throw new Error(`invalid YAML frontmatter: ${errorMessage(error)}`, { cause: error })
   }
-  if (!parsed) {
-    ctx.logger.warn(`skill file ${path} ignored: missing YAML frontmatter`)
-    return undefined
-  }
+  if (!parsed) throw new Error('missing YAML frontmatter')
   const name = stringField(parsed.data, 'name')
   const description = stringField(parsed.data, 'description')
-  if (name === undefined || description === undefined) {
-    ctx.logger.warn(`skill file ${path} ignored: frontmatter requires name and description`)
-    return undefined
-  }
-  if (!isSkillName(name)) {
-    ctx.logger.warn(`skill file ${path} ignored: invalid skill name "${name}"`)
-    return undefined
-  }
+  if (name === undefined || description === undefined) throw new Error('frontmatter requires name and description')
+  if (!isSkillName(name)) throw new Error(`invalid skill name "${name}"`)
   let invocation
   try {
     invocation = parseInvocationPolicy(parsed.data)
   } catch (error) {
-    ctx.logger.warn(`skill file ${path} ignored: invalid invocation frontmatter: ${errorMessage(error)}`)
-    return undefined
+    throw new Error(`invalid invocation frontmatter: ${errorMessage(error)}`, { cause: error })
   }
   return {
     name,
@@ -834,7 +883,6 @@ async function parseSkillFile(path: string, ctx: Context, signal?: AbortSignal, 
     ...optionalString(parsed.data, 'whenToUse'),
     invocation,
     ...optionalMetadata(parsed.data),
-    path: raw.path,
     content: parsed.body.trim(),
   }
 }

@@ -45,6 +45,9 @@
       "path": "../../host/plugin-inventory"
     },
     {
+      "path": "../../host/skill-manager"
+    },
+    {
       "path": "../../interaction/commands"
     },
     {

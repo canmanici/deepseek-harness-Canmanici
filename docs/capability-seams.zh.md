@@ -169,6 +169,15 @@ flowchart LR
   pkg_skill_badge["skill-badge"]
   pkg_skill_filesystem["skill-filesystem"]
   pkg_skill_office["skill-office"]
+  pkg_skill_preferences["skill-preferences"]
+  pkg_skill_sources["skill-sources"]
+  svc_skillPreferences["ctx.skillPreferences<br/>Skill enablement preferences"]
+  svc_skillSources["ctx.skillSources<br/>Remote skill sources"]
+  pkg_skill_marketplace["skill-marketplace"]
+  svc_skillMarketplace["ctx.skillMarketplace<br/>Public skill marketplaces"]
+  pkg_host_skill_manager["host-skill-manager"]
+  svc_skillManager["ctx.skillManager<br/>Skill management Remote"]
+  pkg_client_ui_skill_library["client-ui-skill-library"]
   svc_agents["ctx.agents<br/>Agent service"]
   pkg_acp["acp"]
   svc_agentDefaultModel["ctx.agentDefaultModel<br/>Default Agent model selection"]
@@ -334,6 +343,7 @@ flowchart LR
   pkg_host_directory_picker_browse --> svc_directoryPicker
   pkg_host_directory_picker_native --> svc_directoryPicker
   pkg_host_product_telemetry_otel --> svc_productTelemetry
+  pkg_host_skill_manager --> svc_skillManager
   pkg_host_webserver --> svc_webServer
   pkg_inspector --> svc_inspector
   pkg_invariants --> svc_invariants
@@ -380,7 +390,12 @@ flowchart LR
   pkg_skill --> svc_skills
   pkg_skill_badge --> svc_skills
   pkg_skill_filesystem --> svc_skills
+  pkg_skill_marketplace --> svc_skillMarketplace
   pkg_skill_office --> svc_skills
+  pkg_skill_preferences --> svc_skillPreferences
+  pkg_skill_preferences --> svc_skills
+  pkg_skill_sources --> svc_skillSources
+  pkg_skill_sources --> svc_skills
   pkg_spill --> svc_spillStore
   pkg_spill_local --> svc_spillStore
   pkg_ssh --> svc_ssh
@@ -515,6 +530,8 @@ flowchart LR
   svc_shell --> pkg_tool_pwsh
   svc_shellEnv --> pkg_tool_bash
   svc_shellEnv --> pkg_tool_pwsh
+  svc_skillManager --> pkg_client_ui_skill_library
+  svc_skillMarketplace --> pkg_host_skill_manager
   svc_skills --> pkg_tool_skill
   svc_speechToText --> pkg_experimental_api_speech_to_text
   svc_spillStore --> pkg_spill_policy
@@ -626,7 +643,11 @@ flowchart LR
 | `ctx.commands` | `core` | [`commands`](../packages/interaction/commands) | - | - | - | 插件注册直接面向人的命令，而不会把调用发送给模型。 |
 | `ctx.sessionProjections` | `core` | [`session-projection`](../packages/session/session-projection) | - | [`api-session-controller`](../packages/api/session-controller), [`tool-todo`](../packages/todo/tool-todo), [`session-title`](../packages/session/session-title) | - | 各领域注册由状态驱动的折叠单元；主动驱动过程维护每个会话的水位状态，Session controller 提供 baseline 并推送发生变化的值。 |
 | `ctx.sessionProjectionCache` | `core` | [`session-projection-cache`](../packages/session/session-projection-cache) | - | [`api-session-controller`](../packages/api/session-controller), [`session-query`](../packages/session-query/session-query), [`session-reference`](../packages/context/session-reference), [`subagent`](../packages/subagent/subagent) | - | 按会话持久保存投影单元状态的检查点（节流检查点，以及轮次／结束／分离时的必选检查点），并提供冷读取阶梯：缓存行加持久化尾部回放，因此列表读取永远不需要加载完整日志。 |
-| `ctx.skills` | `seam` | [`skill`](../packages/skill/skill) | [`skill-badge`](../packages/skill/skill-badge), [`skill-filesystem`](../packages/skill/skill-filesystem), [`skill-office`](../packages/skill/skill-office) | [`tool-skill`](../packages/skill/tool-skill) | - | 合并提供方的 skill（技能）目录；tool-skill 渲染会话前缀目录，并加载完整的 skill 正文。 |
+| `ctx.skills` | `seam` | [`skill`](../packages/skill/skill) | [`skill-badge`](../packages/skill/skill-badge), [`skill-filesystem`](../packages/skill/skill-filesystem), [`skill-office`](../packages/skill/skill-office), [`skill-preferences`](../packages/skill/skill-preferences), [`skill-sources`](../packages/skill/skill-sources) | [`tool-skill`](../packages/skill/tool-skill) | - | 合并提供方的 skill（技能）目录；tool-skill 渲染会话前缀目录，并加载完整的 skill 正文。 |
+| `ctx.skillPreferences` | `core` | [`skill-preferences`](../packages/skill/skill-preferences) | - | - | - | 持有全局与按项目的启用偏好文件，并将其作为 ctx.skills 过滤器强制执行。 |
+| `ctx.skillSources` | `core` | [`skill-sources`](../packages/skill/skill-sources) | - | - | - | 持有远程来源列表和已同步的各代，并将其注册为 ctx.skills 提供方。 |
+| `ctx.skillMarketplace` | `core` | [`skill-marketplace`](../packages/skill/skill-marketplace) | - | [`host-skill-manager`](../packages/host/skill-manager) | - | 搜索 GitHub 仓库和公开 skill 搜索 API，并返回由 skill 来源安装的条目。 |
+| `ctx.skillManager` | `core` | [`host-skill-manager`](../packages/host/skill-manager) | - | [`client-ui-skill-library`](../packages/client/ui-skill-library) | - | 为 Skills 页面投影 skill 清单、偏好、市场搜索和来源，并转发它们的变化。 |
 | `ctx.agents` | `core` | [`agent`](../packages/core/agent) | - | [`agent-loop`](../packages/core/agent-loop), [`acp`](../packages/acp/acp), [`subagent-in-process-driver`](../packages/subagent/subagent-in-process-driver) | - | 拥有实时 Agent 句柄、创建／恢复工厂 seam，以及进程本地的发起方传播。 |
 | `ctx.agentDefaultModel` | `core` | [`agent-default-model`](../packages/core/agent-default-model) | - | [`api-session-controller`](../packages/api/session-controller), [`headless`](../packages/bundle/headless) | - | Reads the default ModelSelection from volatile Config and saves selections through the profile editor. |
 | `ctx.agentLoop` | `bundle` | [`agent-loop`](../packages/core/agent-loop) | - | [`base`](../packages/bundle/base), [`sdk-minimal`](../packages/bundle/sdk-minimal) | - | 唯一的具体循环插件；扩展包依赖 dsh-agent 的事件和服务，而不依赖此包。 |

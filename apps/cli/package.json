@@ -61,6 +61,8 @@
     "@deepseek-ai/dsh-skill": "workspace:*",
     "@deepseek-ai/dsh-skill-filesystem": "workspace:*",
     "@deepseek-ai/dsh-skill-office": "workspace:*",
+    "@deepseek-ai/dsh-skill-preferences": "workspace:*",
+    "@deepseek-ai/dsh-skill-sources": "workspace:*",
     "@deepseek-ai/dsh-tool-workspace-dependencies": "workspace:*",
     "@deepseek-ai/dsh-terminal": "workspace:*",
     "@deepseek-ai/dsh-terminal-bash": "workspace:*",
@@ -117,6 +119,7 @@
     "@deepseek-ai/dsh-fs-observation-policy": "workspace:*",
     "@deepseek-ai/dsh-fs-sandbox": "workspace:*",
     "@deepseek-ai/dsh-host-frontend-static": "workspace:*",
+    "@deepseek-ai/dsh-host-skill-manager": "workspace:*",
     "@deepseek-ai/dsh-host-webserver": "workspace:*",
     "@deepseek-ai/dsh-llm": "workspace:*",
     "@deepseek-ai/dsh-llm-deepseek": "workspace:*",
@@ -145,6 +148,7 @@
     "@types/ws": "8.18.1",
     "ajv": "^8.20.0",
     "execa": "^10.0.0",
+    "fflate": "^0.8.3",
     "ws": "8.21.0"
   },
   "exports": {

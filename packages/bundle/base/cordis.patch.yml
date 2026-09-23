@@ -296,12 +296,31 @@
     - id: skill-filesystem
       name: '@deepseek-ai/dsh-skill-filesystem'
 
+    - id: skill-preferences
+      name: '@deepseek-ai/dsh-skill-preferences'
+
+    # Remote skill sources start with the Anthropic public skills repository
+    # enabled. Only the GUI profiles download at startup; other surfaces
+    # expose skills already synced under the DSH home.
+    - id: skill-sources
+      name: '@deepseek-ai/dsh-skill-sources'
+      config:
+        defaultSources:
+          - id: anthropic-skills
+            url: https://github.com/anthropics/skills
+            enabled: true
+        autoSyncOnStart: !!js "['web', 'desktop'].includes(ctx.get('profileContext')?.name)"
+
     - id: skill-badge
       name: '@deepseek-ai/dsh-skill-badge'
       disabled: true
 
     - id: tool-skill
       name: '@deepseek-ai/dsh-tool-skill'
+
+    # Lets agents, including subagents, list skills and switch them on or off.
+    - id: tool-skill-manage
+      name: '@deepseek-ai/dsh-tool-skill-manage'
 
     - id: commands
       name: '@deepseek-ai/dsh-commands'

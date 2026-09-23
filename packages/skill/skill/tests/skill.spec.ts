@@ -7,6 +7,9 @@ import SkillRegistry, {
   renderSkillContent,
   type SkillCandidate,
   type SkillDefinition,
+  type SkillEnablement,
+  type SkillFilter,
+  type SkillFilterControl,
   type SkillInvocationPolicy,
   type SkillLookupOptions,
   type SkillProvider,
@@ -1268,5 +1271,120 @@ describe('SkillRegistry scoped layers', () => {
     control?.invalidate()
     expect(await ctx.skills.list({ scope })).toEqual([])
     await preset.dispose()
+  })
+})
+
+describe('SkillRegistry enablement filters', () => {
+  function filterOf(name: string, disabled: Set<string>, onResolve?: (options: SkillLookupOptions) => void): SkillFilter {
+    return {
+      name,
+      async resolve(options) {
+        onResolve?.(options)
+        return skill => !disabled.has(skill.name)
+      },
+    }
+  }
+
+  it('hides disabled winners from list, snapshot, and get while inventory reports the reason', async () => {
+    const ctx = new Context()
+    await ctx.plugin(SkillRegistry)
+    registerProvider(ctx, new MemoryProvider([
+      memorySkill('kept', 'Kept', 10),
+      memorySkill('dropped', 'Dropped', 10),
+    ]))
+    const seen: Array<string | undefined> = []
+    ctx.skills.registerFilter(() => filterOf('prefs', new Set(['dropped']), options => seen.push(options.cwd)))
+
+    expect((await ctx.skills.list({ cwd: '/work' })).map(skill => skill.name)).toEqual(['kept'])
+    expect(await ctx.skills.snapshot({ cwd: '/work' })).toMatchObject({ complete: true, skills: [{ name: 'kept' }] })
+    expect(await ctx.skills.get('dropped', { cwd: '/work' })).toBeUndefined()
+    expect(await ctx.skills.get('kept', { cwd: '/work' })).toMatchObject({ content: 'kept body.' })
+    const inventory = await ctx.skills.inventory({ cwd: '/work' })
+    expect(inventory.skills.map(({ name, enabled, disabledBy }) => ({ name, enabled, disabledBy }))).toEqual([
+      { name: 'dropped', enabled: false, disabledBy: ['prefs'] },
+      { name: 'kept', enabled: true, disabledBy: [] },
+    ])
+    expect(seen.every(cwd => cwd === '/work')).toBe(true)
+  })
+
+  it('does not let a lower-ranked duplicate replace a disabled winner', async () => {
+    const ctx = new Context()
+    await ctx.plugin(SkillRegistry)
+    registerProvider(ctx, new MemoryProvider([
+      memorySkill('same', 'Winner', 10),
+      memorySkill('same', 'Shadowed', 20),
+    ]))
+    ctx.skills.registerFilter(() => filterOf('prefs', new Set(['same'])))
+    expect(await ctx.skills.list()).toEqual([])
+    expect(await ctx.skills.get('same')).toBeUndefined()
+  })
+
+  it('rejects reads when a filter cannot resolve its policy', async () => {
+    const ctx = new Context()
+    await ctx.plugin(SkillRegistry)
+    registerProvider(ctx, new MemoryProvider([memorySkill('kept', 'Kept', 10)]))
+    ctx.skills.registerFilter(() => ({ name: 'broken', resolve: () => Promise.reject(new Error('malformed preferences')) }))
+    await expect(ctx.skills.list()).rejects.toThrow('malformed preferences')
+    await expect(ctx.skills.get('kept')).rejects.toThrow('malformed preferences')
+  })
+
+  it('notifies on registration, invalidation, and disposal, and restores skills after disposal', async () => {
+    const ctx = new Context()
+    await ctx.plugin(SkillRegistry)
+    registerProvider(ctx, new MemoryProvider([memorySkill('toggled', 'Toggled', 10)]))
+    let changes = 0
+    ctx.on('skills/change', () => { changes += 1 })
+    const disabled = new Set(['toggled'])
+    let control: SkillFilterControl | undefined
+    const fiber = await ctx.plugin({
+      inject: ['skills'],
+      apply(child: Context) {
+        child.skills.registerFilter((received) => {
+          control = received
+          return filterOf('prefs', disabled)
+        })
+      },
+    })
+    expect(changes).toBe(1)
+    expect(await ctx.skills.list()).toEqual([])
+
+    disabled.clear()
+    control?.invalidate()
+    expect(changes).toBe(2)
+    expect((await ctx.skills.list()).map(skill => skill.name)).toEqual(['toggled'])
+
+    disabled.add('toggled')
+    await fiber.dispose()
+    expect(changes).toBe(3)
+    expect(control?.signal.aborted).toBe(true)
+    control?.invalidate()
+    expect(changes).toBe(3)
+    expect((await ctx.skills.list()).map(skill => skill.name)).toEqual(['toggled'])
+  })
+
+  it('rejects duplicate filter names and aborts the rejected registration', async () => {
+    const ctx = new Context()
+    await ctx.plugin(SkillRegistry)
+    ctx.skills.registerFilter(() => filterOf('prefs', new Set()))
+    let rejected: SkillFilterControl | undefined
+    expect(() => ctx.skills.registerFilter((control) => {
+      rejected = control
+      return filterOf('prefs', new Set())
+    })).toThrow('a skill filter named "prefs" is already registered')
+    expect(rejected?.signal.aborted).toBe(true)
+  })
+
+  it('stops a filtered read when the caller aborts during policy resolution', async () => {
+    const ctx = new Context()
+    await ctx.plugin(SkillRegistry)
+    registerProvider(ctx, new MemoryProvider([memorySkill('kept', 'Kept', 10)]))
+    const controller = new AbortController()
+    ctx.skills.registerFilter(() => ({
+      name: 'slow',
+      resolve: () => new Promise<SkillEnablement>(() => {}),
+    }))
+    const read = ctx.skills.list({ signal: controller.signal })
+    controller.abort(new Error('caller left'))
+    await expect(read).rejects.toThrow('caller left')
   })
 })

@@ -1,0 +1,21 @@
+- id: skill-filesystem
+  config:
+    watch: false
+
+- id: skill-preferences
+  config:
+    watch: false
+
+- id: skill-sources
+  config:
+    defaultSources:
+      - id: fixture-skills
+        url: https://github.com/fixture/skills
+        path: skills
+        enabled: true
+    githubApiUrl: !!js process.env.DSH_TEST_GITHUB_API
+    allowHttpLoopback: true
+    autoSyncOnStart: false
+
+- id: session-telemetry-otel
+  disabled: true

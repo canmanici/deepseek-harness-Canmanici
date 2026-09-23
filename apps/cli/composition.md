@@ -110,10 +110,16 @@ flowchart LR
   cfg --> plugin_dsh_base_skill
   plugin_dsh_base_skill_filesystem["skill-filesystem<br/>@deepseek-ai/dsh-skill-filesystem"]
   cfg --> plugin_dsh_base_skill_filesystem
+  plugin_dsh_base_skill_preferences["skill-preferences<br/>@deepseek-ai/dsh-skill-preferences"]
+  cfg --> plugin_dsh_base_skill_preferences
+  plugin_dsh_base_skill_sources["skill-sources<br/>@deepseek-ai/dsh-skill-sources"]
+  cfg --> plugin_dsh_base_skill_sources
   plugin_dsh_base_skill_badge["skill-badge<br/>@deepseek-ai/dsh-skill-badge"]
   cfg --> plugin_dsh_base_skill_badge
   plugin_dsh_base_tool_skill["tool-skill<br/>@deepseek-ai/dsh-tool-skill"]
   cfg --> plugin_dsh_base_tool_skill
+  plugin_dsh_base_tool_skill_manage["tool-skill-manage<br/>@deepseek-ai/dsh-tool-skill-manage"]
+  cfg --> plugin_dsh_base_tool_skill_manage
   plugin_dsh_base_commands["commands<br/>@deepseek-ai/dsh-commands"]
   cfg --> plugin_dsh_base_commands
   plugin_dsh_base_command_feedback["command-feedback<br/>@deepseek-ai/dsh-command-feedback"]
@@ -247,8 +253,11 @@ flowchart LR
 | `agent-instructions` | `@deepseek-ai/dsh-agent-instructions` |
 | `skill` | `@deepseek-ai/dsh-skill` |
 | `skill-filesystem` | `@deepseek-ai/dsh-skill-filesystem` |
+| `skill-preferences` | `@deepseek-ai/dsh-skill-preferences` |
+| `skill-sources` | `@deepseek-ai/dsh-skill-sources` |
 | `skill-badge` | `@deepseek-ai/dsh-skill-badge` |
 | `tool-skill` | `@deepseek-ai/dsh-tool-skill` |
+| `tool-skill-manage` | `@deepseek-ai/dsh-tool-skill-manage` |
 | `commands` | `@deepseek-ai/dsh-commands` |
 | `command-feedback` | `@deepseek-ai/dsh-command-feedback` |
 | `goal` | `@deepseek-ai/dsh-goal` |
