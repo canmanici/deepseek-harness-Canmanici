@@ -21,7 +21,7 @@ overrides:
   '@hono/node-server@<1.19.15': 1.19.15
 
 patchedDependencies:
-  '@earendil-works/pi-ai@0.87.1': d61834f2376acae94fb0b468355aa61cc1e260a377c375b6459ec561c3e3d14e
+  '@earendil-works/pi-ai@0.87.1': e3e259289571dcf976b4113f02fd09ffd972c53390c7488ecd3f37d6f5407070
   '@electron/osx-sign@1.3.3': 280e7b2816caf01423097d24e79107a66afeb563a348630ce9928ae8499a5861
   '@fortune-sheet/core@1.0.4': 488dad2a7648b7d4df31f6bd776b7849fd0fb85be8f1acf268efff758caba3c0
   '@fortune-sheet/react@1.0.4': c17549e117c8fb99f408497c1e84292c21f25516fb762a32518f91b4d9ab0f04
@@ -9427,7 +9427,7 @@ importers:
         version: link:../../../vendor/schemastery
       '@earendil-works/pi-ai':
         specifier: ^0.87.1
-        version: 0.87.1(patch_hash=d61834f2376acae94fb0b468355aa61cc1e260a377c375b6459ec561c3e3d14e)(@modelcontextprotocol/sdk@1.29.0(zod@4.4.3))(supports-color@9.4.0)(ws@8.21.0)(zod@4.4.3)
+        version: 0.87.1(patch_hash=e3e259289571dcf976b4113f02fd09ffd972c53390c7488ecd3f37d6f5407070)(@modelcontextprotocol/sdk@1.29.0(zod@4.4.3))(supports-color@9.4.0)(ws@8.21.0)(zod@4.4.3)
     devDependencies:
       '@deepseek-ai/cordis':
         specifier: workspace:~
@@ -22327,7 +22327,7 @@ snapshots:
     transitivePeerDependencies:
       - '@algolia/client-search'
 
-  '@earendil-works/pi-ai@0.87.1(patch_hash=d61834f2376acae94fb0b468355aa61cc1e260a377c375b6459ec561c3e3d14e)(@modelcontextprotocol/sdk@1.29.0(zod@4.4.3))(supports-color@9.4.0)(ws@8.21.0)(zod@4.4.3)':
+  '@earendil-works/pi-ai@0.87.1(patch_hash=e3e259289571dcf976b4113f02fd09ffd972c53390c7488ecd3f37d6f5407070)(@modelcontextprotocol/sdk@1.29.0(zod@4.4.3))(supports-color@9.4.0)(ws@8.21.0)(zod@4.4.3)':
     dependencies:
       '@anthropic-ai/sdk': 0.124.0(zod@4.4.3)
       '@aws-sdk/client-bedrock-runtime': 3.1127.0

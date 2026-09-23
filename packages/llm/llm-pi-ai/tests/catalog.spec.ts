@@ -69,6 +69,15 @@ async function harness(config: LlmPiAi.Options): Promise<Context> {
   return ctx
 }
 
+describe('installed OpenCode Go catalog', () => {
+  it('serves the plan models the DSH pi-ai patch adds on the Chat Completions endpoint', () => {
+    const models = new Map(getBuiltinModels('opencode-go').map(model => [model.id, model]))
+    for (const id of ['deepseek-flash', 'minimax-m2.5']) {
+      expect(models.get(id)).toMatchObject({ api: 'openai-completions', baseUrl: 'https://opencode.ai/zen/go/v1' })
+    }
+  })
+})
+
 describe('hand-declared providers', () => {
   it('serves a route pi-ai has never heard of from its own declaration', async () => {
     const server = await mockServer([{ events: textEvents }])

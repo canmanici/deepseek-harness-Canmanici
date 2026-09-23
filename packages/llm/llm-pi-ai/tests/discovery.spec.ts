@@ -137,7 +137,7 @@ describe('catalog-route model discovery', () => {
   })
 
   it('interrogates the route\'s principal endpoint for a live answer, merging what it lists', async () => {
-    const listed = ['deepseek-v4-pro', 'deepseek-flash', 'unlisted-anywhere']
+    const listed = ['deepseek-v4-pro', 'live-only-preview', 'unlisted-anywhere']
     // The repeat pins the merge's duplicate handling: an endpoint may list an
     // id twice, and the first row is the one that stays.
     const rows = [...listed.map(id => ({ id })), { id: 'unlisted-anywhere' }]
@@ -161,7 +161,7 @@ describe('catalog-route model discovery', () => {
     expect(models.map(model => model.id))
       .toEqual([...listed, ...catalogIds.filter(id => !listed.includes(id))])
     expect(models.find(model => model.id === 'deepseek-v4-pro')).toEqual(catalogRow('deepseek-v4-pro'))
-    expect(models.find(model => model.id === 'deepseek-flash')).toEqual({ id: 'deepseek-flash', name: 'deepseek-flash' })
+    expect(models.find(model => model.id === 'live-only-preview')).toEqual({ id: 'live-only-preview', name: 'live-only-preview' })
   })
 
   it('asks the endpoint the draft names instead of the route\'s own', async () => {

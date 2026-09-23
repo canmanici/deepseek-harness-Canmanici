@@ -71,3 +71,23 @@ index ad5f4605e8e157f12b8948e88e0c66e8a5494fc4..5609d61b49264b26fc86a787ec19780d
                  break;
              }
              case "toolcall_end":
+diff --git a/dist/providers/opencode-go.models.js b/dist/providers/opencode-go.models.js
+index b6f1b0805bcf081bba9a8a82abb399287f714e20..003266770dfaaf4d9273aaa84bc879b4ff265549 100644
+--- a/dist/providers/opencode-go.models.js
++++ b/dist/providers/opencode-go.models.js
+@@ -2,5 +2,12 @@
+ // Do not edit manually - run 'npm run generate-models' to update
+ import values from "./data/opencode-go.json" with { type: "json" };
+ import { flattenModelCatalog } from "../model-catalog.js";
+-export const OPENCODE_GO_MODELS = flattenModelCatalog("opencode-go", values);
+-//# sourceMappingURL=opencode-go.models.js.map
+\ No newline at end of file
++// DSH: OpenCode Go plan models the 0.87.1 snapshot omits; each one answered a live request on 2026-09-24.
++const DSH_OPENCODE_GO_COMPLETIONS = {
++    "deepseek-flash": { "id": "deepseek-flash", "name": "DeepSeek Flash", "api": "openai-completions", "provider": "opencode-go", "baseUrl": "https://opencode.ai/zen/go/v1", "reasoning": true, "input": ["text"], "cost": { "input": 0.15, "output": 0.6, "cacheRead": 0.003, "cacheWrite": 0 }, "compat": { "supportsStore": false, "supportsDeveloperRole": false, "supportsStrictMode": true, "maxTokensField": "max_tokens", "requiresReasoningContentOnAssistantMessages": true, "thinkingFormat": "deepseek" }, "contextWindow": 1000000, "maxTokens": 384000, "thinkingLevelMap": { "minimal": null, "low": "low", "medium": null, "high": "high", "max": "max" } },
++    "minimax-m2.5": { "id": "minimax-m2.5", "name": "MiniMax-M2.5", "api": "openai-completions", "provider": "opencode-go", "baseUrl": "https://opencode.ai/zen/go/v1", "reasoning": true, "input": ["text"], "cost": { "input": 0.3, "output": 1.2, "cacheRead": 0.06, "cacheWrite": 0 }, "compat": { "supportsStore": false, "supportsDeveloperRole": false, "supportsStrictMode": true, "maxTokensField": "max_tokens" }, "contextWindow": 204800, "maxTokens": 131072 },
++};
++export const OPENCODE_GO_MODELS = flattenModelCatalog("opencode-go", {
++    ...values,
++    "openai-completions": { ...values["openai-completions"], ...DSH_OPENCODE_GO_COMPLETIONS },
++});

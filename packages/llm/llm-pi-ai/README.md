@@ -234,6 +234,7 @@ These limits define where the adapter stops and future work begins. They are cur
 - **Provider HTTP status is unavailable** — pi-ai error events do not expose a stable HTTP status across providers.
 - **Retry policy is provider-owned, not an SDK retry** — pi-ai SDK retries stay disabled so durable agent steps and `llm/retry` events own every visible attempt, and direct `ctx.llm.stream()` calls remain single-attempt.
 - **Streamed tool-call arguments are parsed once, when the call ends** — the installed pi-ai carries [`patches/@earendil-works__pi-ai@0.87.1.patch`](../../../patches/@earendil-works__pi-ai@0.87.1.patch), which removes the per-delta re-parse of the whole accumulated argument JSON in every stream adapter (upstream [earendil-works/pi#9265](https://github.com/earendil-works/pi/issues/9265)); unpatched, a multi-megabyte argument stream costs O(n²) CPU on the event loop and stalls every session in the process. Until `toolcall_end`, a pi-ai partial's tool-call `arguments` stays `{}`; this adapter reads only the delta strings and the finalized arguments. Re-apply or retire the patch on every pi-ai upgrade.
+- **The installed `opencode-go` catalog carries two DSH-added models** — the same patch adds `deepseek-flash` and `minimax-m2.5` on `https://opencode.ai/zen/go/v1` (Chat Completions), which the OpenCode Go plan serves but the 0.87.1 snapshot omits, so the catalog route offers them without a hand-declared route. Drop each entry once an upgraded snapshot ships it.
 
 <a id="dev-note"></a>
 ### Dev Note
