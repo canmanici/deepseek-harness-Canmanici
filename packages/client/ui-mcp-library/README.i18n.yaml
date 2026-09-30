@@ -1,6 +1,49 @@
-# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
-# side as of the last confirmed-consistent state. Both languages carry equal authority;
-# after editing either side, bring the other along and re-record with:
+# Bilingual-pair consistency record for README.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write packages/client/ui-mcp-library/README.md
-README.md: e97ad572beddb546eff9ed06db291e5db05584a2
-README.zh.md: 3a2c77fb5646a758e8e1087b14df5e9580d8ac94
+/:
+  en: 143511e96297f1db
+  zh: 65c0d569adbf0950
+/deepseek-ai-dsh-client-ui-mcp-library:
+  en: 09c2addbbec385ab
+  zh: f0a55c23ffc3dcfa
+/deepseek-ai-dsh-client-ui-mcp-library/summary:
+  en: 732519c8f2e88e07
+  zh: c8ff89b4f8c9066c
+/deepseek-ai-dsh-client-ui-mcp-library/table-of-contents:
+  en: d152484eb41ac6b4
+  zh: a134331a31395608
+/deepseek-ai-dsh-client-ui-mcp-library/use-this-package:
+  en: 2c63765968ee3a8c
+  zh: bbc5927c15a57ddb
+/deepseek-ai-dsh-client-ui-mcp-library/use-this-package/servers:
+  en: 7d51a31b2f2341a1
+  zh: 7fd85176262c352a
+/deepseek-ai-dsh-client-ui-mcp-library/use-this-package/discover:
+  en: 28806d5f0b39adbf
+  zh: 75f44c384639ad37
+/deepseek-ai-dsh-client-ui-mcp-library/use-this-package/add-server:
+  en: f095f03990a693a4
+  zh: 3997b88f8f83888f
+/deepseek-ai-dsh-client-ui-mcp-library/understand-the-implementation:
+  en: 25ea9a475ecf06d5
+  zh: 57d78aed9b958323
+/deepseek-ai-dsh-client-ui-mcp-library/understand-the-implementation/source-map:
+  en: dfee1df4b0ff83ad
+  zh: a152b76fae9495bd
+/deepseek-ai-dsh-client-ui-mcp-library/further-exploration:
+  en: 987293d8127a997d
+  zh: 4c47e6df5b53bcc6
+/deepseek-ai-dsh-client-ui-mcp-library/model-experience:
+  en: 67d06a827fbfd676
+  zh: 3b00f54fee539858
+/deepseek-ai-dsh-client-ui-mcp-library/model-experience/kv-cache-effect:
+  en: ca75c51c89c2c9b0
+  zh: 696d26adaf4eda6d
+/deepseek-ai-dsh-client-ui-mcp-library/known-limitations-and-deferred-work:
+  en: 6276aa97df1f7476
+  zh: 087bd4783a463376
+/deepseek-ai-dsh-client-ui-mcp-library/known-limitations-and-deferred-work/dev-note:
+  en: e67f633dc6fe7773
+  zh: 3bb0c20c93f16f98

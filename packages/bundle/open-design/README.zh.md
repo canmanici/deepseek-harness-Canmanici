@@ -61,7 +61,7 @@ OpenDesign 负责自己的项目文件和守护进程访问权限。DSH 文件�
 <a id="model-experience"></a>
 ## 模型体验
 
-间接地，模型会收到已连接 OpenDesign MCP server 声明的工具和说明。DSH 会以 `mcp__open-design__...` 命名每个工具；可用操作由 OpenDesign 决定。
+间接地，通过已连接的 OpenDesign MCP server，模型会收到它声明的工具和说明；DSH 会以 `mcp__open-design__...` 命名每个工具，可用操作由 OpenDesign 决定。
 
 #### KV Cache 效果
 

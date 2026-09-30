@@ -1,6 +1,43 @@
-# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
-# side as of the last confirmed-consistent state. Both languages carry equal authority;
-# after editing either side, bring the other along and re-record with:
+# Bilingual-pair consistency record for README.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write packages/host/open-design/README.md
-README.md: c244a9edaf64d6fbfb75c5ca05d06e6e3ce39116
-README.zh.md: b93942aadda5d4b6ca7ae552898f4d5b8d9a8b91
+/:
+  en: 7c82ee12852129e1
+  zh: 369d630531cd2abb
+/deepseek-ai-dsh-host-open-design:
+  en: 9bf0ee6f484460e6
+  zh: 18919ef28757b87b
+/deepseek-ai-dsh-host-open-design/summary:
+  en: 4be7cb0bbdd989cf
+  zh: f9c633d7203461a0
+/deepseek-ai-dsh-host-open-design/table-of-contents:
+  en: d152484eb41ac6b4
+  zh: 20a26a2293ee88ac
+/deepseek-ai-dsh-host-open-design/use-this-package:
+  en: f27317debf42b00a
+  zh: 39133ffe6095f267
+/deepseek-ai-dsh-host-open-design/use-this-package/configuration:
+  en: 07414d71e2cfc198
+  zh: 53c4b55a5d11c930
+/deepseek-ai-dsh-host-open-design/use-this-package/runtime-files-and-permissions:
+  en: b59ea7f5ee6cb69b
+  zh: 776fb01d7b156e2a
+/deepseek-ai-dsh-host-open-design/understand-the-implementation:
+  en: dd44880f5aad9734
+  zh: 8b0ea72928fb68aa
+/deepseek-ai-dsh-host-open-design/further-exploration:
+  en: 3bdcf7d06ad96f60
+  zh: 040e27fdaae4ba4a
+/deepseek-ai-dsh-host-open-design/model-experience:
+  en: 7381dc52b789e621
+  zh: 7eccb25f9d82cf5e
+/deepseek-ai-dsh-host-open-design/model-experience/kv-cache-effect:
+  en: bd0dd8b2872fd11e
+  zh: d64052cdcc1abc08
+/deepseek-ai-dsh-host-open-design/known-limitations-and-deferred-work:
+  en: 499fd27e242412ff
+  zh: 34c0a8ad2bef626a
+/deepseek-ai-dsh-host-open-design/known-limitations-and-deferred-work/dev-note:
+  en: a27900df5f313291
+  zh: bbc9749633966e52

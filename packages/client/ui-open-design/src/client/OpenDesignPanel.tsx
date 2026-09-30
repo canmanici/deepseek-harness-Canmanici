@@ -59,7 +59,7 @@ function parseStatus(value: unknown): OpenDesignRuntimeStatus {
 
 /** Read one authenticated Host status response. */
 async function readStatus(signal: AbortSignal): Promise<OpenDesignRuntimeStatus> {
-  const response = await fetch(OPEN_DESIGN_STATUS_PATH, { cache: 'no-store', credentials: 'same-origin', signal })
+  const response = await fetch(OPEN_DESIGN_STATUS_PATH.slice(1), { cache: 'no-store', credentials: 'same-origin', signal })
   if (!response.ok) throw new Error(`OpenDesign status request failed (${String(response.status)})`)
   return parseStatus(await response.json())
 }
@@ -119,7 +119,7 @@ export function OpenDesignPanel({ t }: OpenDesignPanelProps): ReactNode {
     setStarting(true)
     setRequestError(null)
     try {
-      const response = await fetch(OPEN_DESIGN_START_PATH, { method: 'POST', credentials: 'same-origin' })
+      const response = await fetch(OPEN_DESIGN_START_PATH.slice(1), { method: 'POST', credentials: 'same-origin' })
       if (!response.ok && response.status !== 202) throw new Error(`OpenDesign start request failed (${String(response.status)})`)
       setStatus(parseStatus(await response.json()))
       setPollKey(value => value + 1)

@@ -1,7 +1,7 @@
 {
   "name": "@deepseek-ai/dsh-client-ui-mcp-library",
   "description": "MCP page below Skills in the Web sidebar: configured MCP servers with live status, custom servers, and MCP Registry search",
-  "version": "0.1.7-alpha.2",
+  "version": "0.2.0-rc.2",
   "publishConfig": {
     "access": "public"
   },

@@ -55,7 +55,7 @@ function startsWith(data: Uint8Array, offset: number, bytes: readonly number[]):
 }
 
 function ascii(text: string): readonly number[] {
-  return [...text].map(character => character.charCodeAt(0))
+  return Array.from({ length: text.length }, (_, index) => text.charCodeAt(index))
 }
 
 const PNG_SIGNATURE = [0x89, ...ascii('PNG\r\n\u001a\n')]

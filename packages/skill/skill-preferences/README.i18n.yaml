@@ -1,6 +1,58 @@
-# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
-# side as of the last confirmed-consistent state. Both languages carry equal authority;
-# after editing either side, bring the other along and re-record with:
+# Bilingual-pair consistency record for README.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write packages/skill/skill-preferences/README.md
-README.md: bc70d70513b59e6e3eb64a296d0415b2cf1a1568
-README.zh.md: f8a54b4ace5e4fb0a53d87efbc71497b98f833d2
+/:
+  en: ab34cc866fb87f7a
+  zh: 65a38a4db323b0f6
+/deepseek-ai-dsh-skill-preferences:
+  en: 286b561df223e9c9
+  zh: c07a0728979cba29
+/deepseek-ai-dsh-skill-preferences/summary:
+  en: c1941294ecb8f3b6
+  zh: de2e88897bb6949b
+/deepseek-ai-dsh-skill-preferences/table-of-contents:
+  en: d152484eb41ac6b4
+  zh: 09388d293f9be9cb
+/deepseek-ai-dsh-skill-preferences/use-this-package:
+  en: 579bf977db3c2dfd
+  zh: 7d1abf58963e9369
+/deepseek-ai-dsh-skill-preferences/use-this-package/resolution-order:
+  en: 193a611ad8082cbf
+  zh: f5336a3a3e28d5a9
+/deepseek-ai-dsh-skill-preferences/use-this-package/preferences-file:
+  en: 8258f1407ee435b2
+  zh: d9d176ad1b7d9d76
+/deepseek-ai-dsh-skill-preferences/use-this-package/configuration:
+  en: e507aa598e2a4108
+  zh: b851f4df45559830
+/deepseek-ai-dsh-skill-preferences/use-this-package/service:
+  en: 051685c0199fdcef
+  zh: 8058a7d6acfbef37
+/deepseek-ai-dsh-skill-preferences/use-this-package/observable-success-and-failures:
+  en: afed0a2b3f95cfdf
+  zh: 939cedce82e9892d
+/deepseek-ai-dsh-skill-preferences/understand-the-implementation:
+  en: 42b15ac6321706aa
+  zh: 7ae097f3abcc5d9c
+/deepseek-ai-dsh-skill-preferences/understand-the-implementation/design-concept:
+  en: 9570dedfbdc14fb5
+  zh: d1fce5b33598a097
+/deepseek-ai-dsh-skill-preferences/understand-the-implementation/source-map:
+  en: ecbb9cf94d3467a7
+  zh: 9d415e84f57879e6
+/deepseek-ai-dsh-skill-preferences/further-exploration:
+  en: 37d3ecba2cb981af
+  zh: 6866c2fa6b75305a
+/deepseek-ai-dsh-skill-preferences/model-experience:
+  en: 699cb26437ad0419
+  zh: ff066555663f65de
+/deepseek-ai-dsh-skill-preferences/model-experience/kv-cache-effect:
+  en: 40c3d460bcc839f4
+  zh: 2b03fee69eaaf556
+/deepseek-ai-dsh-skill-preferences/known-limitations-and-deferred-work:
+  en: 3a7d067be35269eb
+  zh: 91dc3ba13e88ac2f
+/deepseek-ai-dsh-skill-preferences/known-limitations-and-deferred-work/dev-note:
+  en: e67f633dc6fe7773
+  zh: e88aeb617ffb74ea

@@ -1,7 +1,8 @@
 {
   "name": "@deepseek-ai/dsh-open-design",
   "description": "Optional DSH-managed OpenDesign runtime, Studio panel, and MCP tools",
-  "version": "0.1.7-alpha.2",
+  "version": "0.2.0-rc.2",
+  "icon": "./icon.svg",
   "publishConfig": {
     "access": "public"
   },
@@ -19,10 +20,13 @@
       "default": "./lib/index.js"
     },
     "./cordis.patch.yml": "./cordis.patch.yml",
+    "./locale/*.json": "./locale/*.json",
     "./src/*": "./src/*",
     "./package.json": "./package.json"
   },
   "files": [
+    "icon.svg",
+    "locale/*.json",
     "lib/index.js",
     "cordis.patch.yml",
     "lib/types/**/*.d.ts"

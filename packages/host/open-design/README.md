@@ -90,7 +90,7 @@ No runtime invariant companion is published: installation validation, port selec
 <a id="model-experience"></a>
 ## Model Experience
 
-None; this package owns the runtime and browser routes. The optional bundle's MCP row provides the OpenDesign tools to the agent.
+None, as the package owns the runtime and browser routes; the optional bundle's MCP row provides the OpenDesign tools to the agent.
 
 #### KV Cache effect
 

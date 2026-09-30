@@ -90,7 +90,7 @@ kind: "package-reference"
 <a id="model-experience"></a>
 ## 模型体验
 
-无；本包负责运行时与浏览器路由。可选组合包的 MCP 条目会向智能体提供 OpenDesign 工具。
+无，因为本包负责运行时与浏览器路由；可选组合包的 MCP 条目会向智能体提供 OpenDesign 工具。
 
 #### KV Cache 效果
 

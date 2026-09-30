@@ -14,6 +14,7 @@
   "ignorePatterns": [
     "**/lib/**",
     "**/node_modules/**",
+    "third_party/**", // Vendored submodule sources are linted by their own repository.
     "**/.sessions/**",
     ".claude/**", // Harness-local state belongs to other checkouts, not this checkout's sources.
     "**/.doc-typecheck-*/**",

@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "OpenDesign",
+    "description": "Design with the DSH-managed OpenDesign runtime; its Studio and MCP tools join the agent. The first start downloads the runtime."
+  }
+}

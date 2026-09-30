@@ -1,6 +1,40 @@
-# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
-# side as of the last confirmed-consistent state. Both languages carry equal authority;
-# after editing either side, bring the other along and re-record with:
+# Bilingual-pair consistency record for README.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write packages/mcp/mcp-status/README.md
-README.md: e903ee706cc4997f54b49020f27efb26d7f6ec6e
-README.zh.md: c68149a87a419bdbe70af6932316b8c9f705a6b8
+/:
+  en: 2471aede02d0973d
+  zh: c2fc1f462e7553f1
+/deepseek-ai-dsh-mcp-status:
+  en: 17d4971ceb78253d
+  zh: 97d1d6608fed612f
+/deepseek-ai-dsh-mcp-status/summary:
+  en: 938fcf92eb11f40d
+  zh: a0c5e14adbced974
+/deepseek-ai-dsh-mcp-status/table-of-contents:
+  en: d152484eb41ac6b4
+  zh: a134331a31395608
+/deepseek-ai-dsh-mcp-status/use-this-package:
+  en: 3aff05ceacbbe2e8
+  zh: b772a00af22f9ff9
+/deepseek-ai-dsh-mcp-status/understand-the-implementation:
+  en: 9fd1467671b732b3
+  zh: 4b947c3614e1ae47
+/deepseek-ai-dsh-mcp-status/understand-the-implementation/source-map:
+  en: 5014d7b908463ddb
+  zh: e180609b856f8491
+/deepseek-ai-dsh-mcp-status/further-exploration:
+  en: 20b3141b1f638dd3
+  zh: 019fa112f374d212
+/deepseek-ai-dsh-mcp-status/model-experience:
+  en: 34c5dd8994a50d3d
+  zh: 4548e81860df6b9a
+/deepseek-ai-dsh-mcp-status/model-experience/kv-cache-effect:
+  en: ca75c51c89c2c9b0
+  zh: 696d26adaf4eda6d
+/deepseek-ai-dsh-mcp-status/known-limitations-and-deferred-work:
+  en: 7cd7eb287211cd69
+  zh: 6ddd8bdde02e7668
+/deepseek-ai-dsh-mcp-status/known-limitations-and-deferred-work/dev-note:
+  en: e67f633dc6fe7773
+  zh: 3bb0c20c93f16f98

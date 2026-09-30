@@ -126,9 +126,15 @@ async function assertPortAvailable(port: number): Promise<void> {
   const server = createServer()
   await new Promise<void>((resolve, reject) => {
     server.once('error', reject)
-    server.listen(port, '127.0.0.1', () => { server.removeAllListeners('error'); resolve() })
+    server.listen(port, '127.0.0.1', () => {
+      server.removeAllListeners('error')
+      resolve()
+    })
   })
-  await new Promise<void>((resolve, reject) => server.close(error => error === undefined ? resolve() : reject(error)))
+  await new Promise<void>((resolve, reject) => server.close((error) => {
+    if (error === undefined) resolve()
+    else reject(error)
+  }))
 }
 
 /** Resolve one required runtime file without accepting a directory or dangling link. */
@@ -204,7 +210,7 @@ class OpenDesignRuntime {
     this.bytesDownloaded = 0
     this.totalBytes = null
     this.phase = 'starting'
-    this.operation = this.cleanupOwnedRuntime().then(() => this.installAndStart()).catch(async (error) => {
+    this.operation = this.cleanupOwnedRuntime().then(() => this.installAndStart()).catch(async (error: unknown) => {
       try {
         await this.cleanupOwnedRuntime()
       } catch (cleanupError) {
@@ -253,14 +259,14 @@ class OpenDesignRuntime {
       if (this.disposed || this.phase !== 'ready') return
       this.phase = 'failed'
       this.error = `OpenDesign headless process exited (code ${String(outcome.exitCode)}, signal ${String(outcome.signal)})`
-      void this.cleanupOwnedRuntime().catch((error) => {
+      void this.cleanupOwnedRuntime().catch((error: unknown) => {
         this.ctx.logger.error(`OpenDesign cleanup after launcher exit failed: ${errorMessage(error)}`)
       })
-    }, (error) => {
+    }, (error: unknown) => {
       if (this.disposed || this.phase !== 'ready') return
       this.phase = 'failed'
       this.error = errorMessage(error)
-      void this.cleanupOwnedRuntime().catch((cleanupError) => {
+      void this.cleanupOwnedRuntime().catch((cleanupError: unknown) => {
         this.ctx.logger.error(`OpenDesign cleanup after launcher failure failed: ${errorMessage(cleanupError)}`)
       })
     })
@@ -364,19 +370,22 @@ class OpenDesignRuntime {
   private async waitUntilReady(child: SubprocessHandle): Promise<void> {
     const deadline = Date.now() + this.config.startupTimeoutMs
     let launchError: string | undefined
+    const launchFailure = (): string | undefined => launchError
     void child.done.then((outcome) => {
       if (outcome.exitCode !== 0 || outcome.signal !== null) {
         launchError = `OpenDesign headless launcher exited before readiness (code ${String(outcome.exitCode)}, signal ${String(outcome.signal)})`
       }
-    }, (error) => { launchError = `OpenDesign headless launcher failed before readiness: ${errorMessage(error)}` })
+    }, (error: unknown) => { launchError = `OpenDesign headless launcher failed before readiness: ${errorMessage(error)}` })
     while (Date.now() < deadline) {
       if (this.abort.signal.aborted) throw this.abort.signal.reason
-      if (launchError !== undefined) throw new Error(launchError)
+      const earlyFailure = launchFailure()
+      if (earlyFailure !== undefined) throw new Error(earlyFailure)
       const ready = await Promise.all([
         fetch(`${this.daemonUrl}/api/health`, { signal: AbortSignal.timeout(1000) }).then(response => response.ok).catch(() => false),
         fetch(this.studioUrl, { signal: AbortSignal.timeout(1000) }).then(response => response.ok).catch(() => false),
       ])
-      if (launchError !== undefined) throw new Error(launchError)
+      const lateFailure = launchFailure()
+      if (lateFailure !== undefined) throw new Error(lateFailure)
       if (ready.every(Boolean)) return
       await new Promise<void>(resolve => setTimeout(resolve, READY_POLL_INTERVAL_MS))
     }
@@ -402,10 +411,12 @@ class OpenDesignRuntime {
     const settlement = await Promise.race([
       child.done.then(
         outcome => ({ kind: 'outcome' as const, outcome }),
-        error => ({ kind: 'error' as const, error }),
+        (error: unknown) => ({ kind: 'error' as const, error }),
       ),
       new Promise<{ readonly kind: 'timeout' }>((resolve) => {
-        timer = setTimeout(() => resolve({ kind: 'timeout' }), PROCESS_STOP_TIMEOUT_MS)
+        timer = setTimeout(() => {
+          resolve({ kind: 'timeout' })
+        }, PROCESS_STOP_TIMEOUT_MS)
       }),
     ])
     if (timer !== undefined) clearTimeout(timer)
@@ -502,10 +513,14 @@ export function apply(ctx: Context, config: Config): void {
       path: OPEN_DESIGN_STATUS_PATH,
       handler(req, res) {
         const rejection = connection.requestRejection(req)
-        if (rejection !== undefined) return sendJson(res, rejection, { error: 'request rejected' })
+        if (rejection !== undefined) {
+          sendJson(res, rejection, { error: 'request rejected' })
+          return
+        }
         if (req.method !== 'GET') {
           res.setHeader('allow', 'GET')
-          return sendJson(res, 405, { error: 'method not allowed' })
+          sendJson(res, 405, { error: 'method not allowed' })
+          return
         }
         sendJson(res, 200, runtime.status())
       },
@@ -515,16 +530,20 @@ export function apply(ctx: Context, config: Config): void {
       path: OPEN_DESIGN_START_PATH,
       handler(req, res) {
         const rejection = connection.requestRejection(req)
-        if (rejection !== undefined) return sendJson(res, rejection, { error: 'request rejected' })
+        if (rejection !== undefined) {
+          sendJson(res, rejection, { error: 'request rejected' })
+          return
+        }
         if (req.method !== 'POST') {
           res.setHeader('allow', 'POST')
-          return sendJson(res, 405, { error: 'method not allowed' })
+          sendJson(res, 405, { error: 'method not allowed' })
+          return
         }
-        void runtime.start().catch((error) => { ctx.logger.error(`OpenDesign runtime failed: ${errorMessage(error)}`) })
+        void runtime.start().catch((error: unknown) => { ctx.logger.error(`OpenDesign runtime failed: ${errorMessage(error)}`) })
         sendJson(res, 202, runtime.status())
       },
     })
-    void runtime.start().catch((error) => { ctx.logger.error(`OpenDesign runtime failed: ${errorMessage(error)}`) })
+    void runtime.start().catch((error: unknown) => { ctx.logger.error(`OpenDesign runtime failed: ${errorMessage(error)}`) })
     return async () => {
       status()
       start()

@@ -1,6 +1,6 @@
 # Security Audit — DeepSeek Harness
 
-Date: 2026-09-22 · Revision audited: `master` @ `00102833df` · Fix branch: `security/audit-fixes`
+Date: 2026-09-22 · Revision audited: `master` at the `0.1.7-alpha.2` release merge · Fix branch: `security/audit-fixes`
 
 Read-only audit of the whole repository (7 parallel domain reviews plus repo-wide automated
 scans), followed by a fix pass for the contained findings. Findings that change the product's
@@ -24,7 +24,7 @@ Trust model used throughout:
 | `pnpm audit --prod` before fixes | 15 high, 20 moderate, 1 low, 0 critical |
 | `pnpm audit --prod` after fixes | **0 high, 0 moderate (prod), 2 moderate dev-only** (`vitest`, `@vitest/mocker`) |
 | Install-script policy | deny-by-default `allowBuilds`; `ignoredBuilds: []`; CI uses `--frozen-lockfile` |
-| Lockfile provenance | all integrity-pinned; one non-registry source (`xlsx` from cdn.sheetjs.com, integrity-pinned) |
+| Lockfile sources | all integrity-pinned; one non-registry source (`xlsx` from cdn.sheetjs.com, integrity-pinned) |
 | Static pattern sweep | no `eval`/`new Function` reachable from model tools; no `shell: true` in production spawns; no TLS-verification disable |
 | Security gate in CI | none (no `pnpm audit`/osv-scanner/CodeQL step); Dependabot configured with a 30-day cooldown |
 

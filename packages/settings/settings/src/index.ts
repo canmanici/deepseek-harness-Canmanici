@@ -132,7 +132,7 @@ function rejectLoaderExpression(value: unknown, path: string, visiting = new Wea
   if (Array.isArray(value)) {
     if (visiting.has(value)) return
     visiting.add(value)
-    value.forEach((entry, index) => rejectLoaderExpression(entry, `${path}[${index}]`, visiting))
+    for (const [index, entry] of value.entries()) rejectLoaderExpression(entry, `${path}[${index}]`, visiting)
     return
   }
   if (!isPlainObject(value)) return

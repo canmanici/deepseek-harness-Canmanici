@@ -1,6 +1,55 @@
-# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
-# side as of the last confirmed-consistent state. Both languages carry equal authority;
-# after editing either side, bring the other along and re-record with:
+# Bilingual-pair consistency record for README.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write packages/skill/skill-marketplace/README.md
-README.md: df901bc9577dd6f43086cc4d75f720a1c0b5e664
-README.zh.md: aad1320066af00164a00424432c51a36eeb9786f
+/:
+  en: 9bbf89ec0239f7ac
+  zh: 5ba95a6c7761eb92
+/deepseek-ai-dsh-skill-marketplace:
+  en: 3d4cd7c3b4b4e487
+  zh: 769ccdb59ec4befe
+/deepseek-ai-dsh-skill-marketplace/summary:
+  en: 836d4fb806e43f19
+  zh: eceadde4fd234041
+/deepseek-ai-dsh-skill-marketplace/table-of-contents:
+  en: d152484eb41ac6b4
+  zh: a134331a31395608
+/deepseek-ai-dsh-skill-marketplace/use-this-package:
+  en: bbff250eba0f1b89
+  zh: b20a47f82d8ab6e0
+/deepseek-ai-dsh-skill-marketplace/use-this-package/marketplace-kinds:
+  en: 03446ddce23322eb
+  zh: efc125a88bb5e154
+/deepseek-ai-dsh-skill-marketplace/use-this-package/service:
+  en: 22454ca24d2b0528
+  zh: eb5fbbcbe7b01b68
+/deepseek-ai-dsh-skill-marketplace/use-this-package/configuration:
+  en: e0f98d06866f6e3e
+  zh: 1b8f0e8c972baab9
+/deepseek-ai-dsh-skill-marketplace/use-this-package/observable-success-and-failures:
+  en: feb56729f64b71c8
+  zh: d3cf8770caca6886
+/deepseek-ai-dsh-skill-marketplace/understand-the-implementation:
+  en: 42b15ac6321706aa
+  zh: c5500056b41ce570
+/deepseek-ai-dsh-skill-marketplace/understand-the-implementation/design-concept:
+  en: d5025f1642256ad0
+  zh: 266aace88e5bea4a
+/deepseek-ai-dsh-skill-marketplace/understand-the-implementation/source-map:
+  en: 57733b1824cfd9ea
+  zh: a5c7162dcad4e420
+/deepseek-ai-dsh-skill-marketplace/further-exploration:
+  en: 03ceff2301fffed8
+  zh: b58382c3421b7ac7
+/deepseek-ai-dsh-skill-marketplace/model-experience:
+  en: 8ca2240caf1ece55
+  zh: d5977e38898973dd
+/deepseek-ai-dsh-skill-marketplace/model-experience/kv-cache-effect:
+  en: ca75c51c89c2c9b0
+  zh: 696d26adaf4eda6d
+/deepseek-ai-dsh-skill-marketplace/known-limitations-and-deferred-work:
+  en: f17aa5b23f3da9fb
+  zh: 6d136710a52bb42f
+/deepseek-ai-dsh-skill-marketplace/known-limitations-and-deferred-work/dev-note:
+  en: e67f633dc6fe7773
+  zh: 3bb0c20c93f16f98

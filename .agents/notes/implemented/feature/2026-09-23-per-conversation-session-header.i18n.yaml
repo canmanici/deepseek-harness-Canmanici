@@ -1,6 +1,19 @@
-# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
-# side as of the last confirmed-consistent state. Both languages carry equal authority;
-# after editing either side, bring the other along and re-record with:
+# Bilingual-pair consistency record for 2026-09-23-per-conversation-session-header.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/feature/2026-09-23-per-conversation-session-header.md
-2026-09-23-per-conversation-session-header.md: add8d26cf27129c7f7e462fcecad627b5e8e3fe0
-2026-09-23-per-conversation-session-header.zh.md: 230cf9775a73dc23240a19f292d5957ea9a172cd
+/agent-note-per-conversation-session-header-for-pi-ai-routes:
+  en: 8690c1c6a5d2b953
+  zh: 6d7a27648c1889a5
+/agent-note-per-conversation-session-header-for-pi-ai-routes/problem:
+  en: 00a0a8b268cbc986
+  zh: 5647c475bcdaf5fb
+/agent-note-per-conversation-session-header-for-pi-ai-routes/decision:
+  en: 98ffff461f403494
+  zh: 7c6b19aacb59f7ab
+/agent-note-per-conversation-session-header-for-pi-ai-routes/alternatives-considered:
+  en: 1538486bdb459f3a
+  zh: 16c2fab3410f5ddf
+/agent-note-per-conversation-session-header-for-pi-ai-routes/consequences:
+  en: 4328e8ae413eb36a
+  zh: 9c11953ec298fb0f

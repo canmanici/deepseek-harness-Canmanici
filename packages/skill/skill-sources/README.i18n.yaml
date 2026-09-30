@@ -1,6 +1,61 @@
-# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
-# side as of the last confirmed-consistent state. Both languages carry equal authority;
-# after editing either side, bring the other along and re-record with:
+# Bilingual-pair consistency record for README.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write packages/skill/skill-sources/README.md
-README.md: 91d4787d9477ec994fea4ac262527c66dba584be
-README.zh.md: 8207232429df17867c02556fd194d6f2cd89f1ef
+/:
+  en: 194ee950008822b0
+  zh: 838d53db63f539b8
+/deepseek-ai-dsh-skill-sources:
+  en: 6e4bf0aec0fa3afa
+  zh: c786fc1086bf71c3
+/deepseek-ai-dsh-skill-sources/summary:
+  en: b86c8e5ab15987da
+  zh: ea6634dbcd635fc1
+/deepseek-ai-dsh-skill-sources/table-of-contents:
+  en: d152484eb41ac6b4
+  zh: 09388d293f9be9cb
+/deepseek-ai-dsh-skill-sources/use-this-package:
+  en: bbff250eba0f1b89
+  zh: 0a618f05cc88ee2b
+/deepseek-ai-dsh-skill-sources/use-this-package/source-urls:
+  en: db6a3112ed946b85
+  zh: 02483050df31d115
+/deepseek-ai-dsh-skill-sources/use-this-package/what-a-sync-does:
+  en: 50873a69780363c6
+  zh: 2cdb9e876be02e2b
+/deepseek-ai-dsh-skill-sources/use-this-package/service:
+  en: 0e0a709dfdbf9676
+  zh: c586c2bf4c853705
+/deepseek-ai-dsh-skill-sources/use-this-package/configuration:
+  en: cf615a375b2b1e00
+  zh: 19db07ff86cdeb3b
+/deepseek-ai-dsh-skill-sources/use-this-package/trust:
+  en: d0f46e085bc4bc4d
+  zh: e79f2aac7a38ad51
+/deepseek-ai-dsh-skill-sources/use-this-package/observable-success-and-failures:
+  en: 582523a3d7d191b4
+  zh: 58cfcd27af8b84a8
+/deepseek-ai-dsh-skill-sources/understand-the-implementation:
+  en: 42b15ac6321706aa
+  zh: 7ae097f3abcc5d9c
+/deepseek-ai-dsh-skill-sources/understand-the-implementation/design-concept:
+  en: 2a32273a85f11c97
+  zh: 656587e2b63bf2a4
+/deepseek-ai-dsh-skill-sources/understand-the-implementation/source-map:
+  en: 4ce8a2c0127da5fa
+  zh: e1f5e61b21d547a1
+/deepseek-ai-dsh-skill-sources/further-exploration:
+  en: 961769207133564b
+  zh: 89ef6d571363c14b
+/deepseek-ai-dsh-skill-sources/model-experience:
+  en: 0d67ff9e1cc685d4
+  zh: 5999f7e297ec04ee
+/deepseek-ai-dsh-skill-sources/model-experience/kv-cache-effect:
+  en: 4577c8751a968c0b
+  zh: e8cc500eda84f43b
+/deepseek-ai-dsh-skill-sources/known-limitations-and-deferred-work:
+  en: 175387e37a4605ba
+  zh: c2cb96090f8686b7
+/deepseek-ai-dsh-skill-sources/known-limitations-and-deferred-work/dev-note:
+  en: e67f633dc6fe7773
+  zh: e88aeb617ffb74ea

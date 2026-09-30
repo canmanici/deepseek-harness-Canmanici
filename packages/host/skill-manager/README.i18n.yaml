@@ -1,6 +1,46 @@
-# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
-# side as of the last confirmed-consistent state. Both languages carry equal authority;
-# after editing either side, bring the other along and re-record with:
+# Bilingual-pair consistency record for README.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write packages/host/skill-manager/README.md
-README.md: 02dd3431d779f3e93545a0c7e7d700eb9a7aa7a6
-README.zh.md: 1c795033ed50a95827cb6dc862e0d4c8af6a3cb1
+/:
+  en: 698b3ba13f6b8039
+  zh: f2937773c1055a72
+/deepseek-ai-dsh-host-skill-manager:
+  en: 69329805313446e4
+  zh: 82ffa26ca6d8975d
+/deepseek-ai-dsh-host-skill-manager/summary:
+  en: 66e0a923e57d17b1
+  zh: 15c99753d1405e6a
+/deepseek-ai-dsh-host-skill-manager/table-of-contents:
+  en: d152484eb41ac6b4
+  zh: 09388d293f9be9cb
+/deepseek-ai-dsh-host-skill-manager/use-this-package:
+  en: 56446dd265917f9a
+  zh: 1f2f9e8304963eed
+/deepseek-ai-dsh-host-skill-manager/use-this-package/remote-methods:
+  en: 146eff9475724f2b
+  zh: b6625554e87db224
+/deepseek-ai-dsh-host-skill-manager/use-this-package/events-and-errors:
+  en: c9a570386a203190
+  zh: 23068d2c70d9fbd6
+/deepseek-ai-dsh-host-skill-manager/understand-the-implementation:
+  en: 42b15ac6321706aa
+  zh: 7ae097f3abcc5d9c
+/deepseek-ai-dsh-host-skill-manager/understand-the-implementation/source-map:
+  en: 27d6880e05320766
+  zh: 1fa0e7a72cb82688
+/deepseek-ai-dsh-host-skill-manager/further-exploration:
+  en: 70e8725391424e9b
+  zh: 5c7e29132688c03b
+/deepseek-ai-dsh-host-skill-manager/model-experience:
+  en: 169214b7c1e36459
+  zh: c30213cfbe31cf58
+/deepseek-ai-dsh-host-skill-manager/model-experience/kv-cache-effect:
+  en: ca75c51c89c2c9b0
+  zh: f57cc48a1b5cbfa9
+/deepseek-ai-dsh-host-skill-manager/known-limitations-and-deferred-work:
+  en: 0e58418904d290e8
+  zh: d1a88db771e9d732
+/deepseek-ai-dsh-host-skill-manager/known-limitations-and-deferred-work/dev-note:
+  en: e67f633dc6fe7773
+  zh: e88aeb617ffb74ea

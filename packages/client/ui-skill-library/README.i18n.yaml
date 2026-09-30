@@ -1,6 +1,52 @@
-# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
-# side as of the last confirmed-consistent state. Both languages carry equal authority;
-# after editing either side, bring the other along and re-record with:
+# Bilingual-pair consistency record for README.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write packages/client/ui-skill-library/README.md
-README.md: 8ff58a0b47e62cc9cf5dec80f93e23fc7cefa94e
-README.zh.md: e947a49753bf2d972bfdd774f1069e819352dfb4
+/:
+  en: d3f54886952bd34b
+  zh: 7028d5d2bc935996
+/deepseek-ai-dsh-client-ui-skill-library:
+  en: b16483d32a7b5f8e
+  zh: 3172ed44d21a6bba
+/deepseek-ai-dsh-client-ui-skill-library/summary:
+  en: 93c86b5c291ce05f
+  zh: e44a63922866036e
+/deepseek-ai-dsh-client-ui-skill-library/table-of-contents:
+  en: d152484eb41ac6b4
+  zh: a134331a31395608
+/deepseek-ai-dsh-client-ui-skill-library/use-this-package:
+  en: bded5ccb21be1697
+  zh: 1d388af36515f2b2
+/deepseek-ai-dsh-client-ui-skill-library/use-this-package/discover:
+  en: a939670118a20be0
+  zh: fc37949285d28f94
+/deepseek-ai-dsh-client-ui-skill-library/use-this-package/installed:
+  en: 33088f73e67e9156
+  zh: 531089fa92387a0d
+/deepseek-ai-dsh-client-ui-skill-library/use-this-package/sources:
+  en: e78c8045d0b562b8
+  zh: 4f871fe96f2ac55e
+/deepseek-ai-dsh-client-ui-skill-library/use-this-package/new-and-edited-skills:
+  en: 37b7fd26a4bd6a77
+  zh: c51c9e05432f83c9
+/deepseek-ai-dsh-client-ui-skill-library/understand-the-implementation:
+  en: 4d5e50f6b09d40d0
+  zh: 7ade91f6c3fdd5d3
+/deepseek-ai-dsh-client-ui-skill-library/understand-the-implementation/source-map:
+  en: 973551400a1c5cfb
+  zh: 91f26ca7c9679e97
+/deepseek-ai-dsh-client-ui-skill-library/further-exploration:
+  en: 96f643cff2d160d6
+  zh: cb40f872a9be97c7
+/deepseek-ai-dsh-client-ui-skill-library/model-experience:
+  en: 893eee067004cc7b
+  zh: 9ca2b86c79d0230f
+/deepseek-ai-dsh-client-ui-skill-library/model-experience/kv-cache-effect:
+  en: ca75c51c89c2c9b0
+  zh: 696d26adaf4eda6d
+/deepseek-ai-dsh-client-ui-skill-library/known-limitations-and-deferred-work:
+  en: 9c39d1afbe4f37e8
+  zh: db5ed895a5996d15
+/deepseek-ai-dsh-client-ui-skill-library/known-limitations-and-deferred-work/dev-note:
+  en: e67f633dc6fe7773
+  zh: 3bb0c20c93f16f98

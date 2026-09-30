@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "OpenDesign",
+    "description": "使用由 DSH 管理的 OpenDesign 运行时进行设计；其 Studio 与 MCP 工具会加入智能体。首次启动会下载运行时。"
+  }
+}

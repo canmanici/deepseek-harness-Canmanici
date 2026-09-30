@@ -962,7 +962,10 @@ describe('provider profile lifecycle', () => {
         content: [{ type: 'image', attachment: IMAGE_REF }],
         source: { kind: 'model', provider: 'deepseek-official', model: 'deepseek-v4-flash' },
       })],
-    })).rejects.toMatchObject({ code: 'UNSUPPORTED_CONTENT' })
+    })).rejects.toMatchObject({
+      code: 'UNSUPPORTED_CONTENT',
+      message: 'pi-ai model "deepseek-v4-pro" does not support image input',
+    })
     await expect(drain({
       provider: 'openai',
       model: 'gpt-4.1',
@@ -1079,4 +1082,17 @@ describe('abort wiring', () => {
     await new Promise(resolve => setTimeout(resolve, 20))
     expect(server.requests).toHaveLength(1)
   })
+})
+
+it.each([
+  new LlmError('missing credential', 'MISSING_CREDENTIAL'),
+  new LlmError('invalid credential', 'INVALID_CREDENTIAL'),
+  new Error('credential storage failed'),
+])('retains its configured catalog independently of credential failures: $message', async (error) => {
+  const adapter = new PiAiAdapter({
+    profiles: () => resolveProfiles({ deepseek: { apiKeyEnv: 'PI_TEST_KEY' } }),
+    resolveApiKey: () => Promise.reject(error),
+    auth: memoryAuth(),
+  })
+  expect(await adapter.listModels('deepseek')).not.toHaveLength(0)
 })

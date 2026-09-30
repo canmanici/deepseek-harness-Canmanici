@@ -63,7 +63,7 @@ kind: "package-reference"
 <a id="model-experience"></a>
 ## 模型体验
 
-无；本包呈现面向用户的 Studio 与运行时状态。独立的 MCP 客户端条目会向智能体提供 OpenDesign 工具。
+无，因为本包呈现面向用户的 Studio 与运行时状态；独立的 MCP 客户端条目会向智能体提供 OpenDesign 工具。
 
 #### KV Cache 效果
 

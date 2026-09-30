@@ -1,7 +1,7 @@
 {
   "name": "@deepseek-ai/dsh-client-ui-skill-library",
   "description": "Skills page under Plugins in the Web sidebar: skill library, per-skill enablement, authoring, and remote sources",
-  "version": "0.1.7-alpha.2",
+  "version": "0.2.0-rc.2",
   "publishConfig": {
     "access": "public"
   },

@@ -1,6 +1,19 @@
-# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
-# side as of the last confirmed-consistent state. Both languages carry equal authority;
-# after editing either side, bring the other along and re-record with:
+# Bilingual-pair consistency record for 2026-09-23-live-catalog-discovery-and-per-model-protocol.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/feature/2026-09-23-live-catalog-discovery-and-per-model-protocol.md
-2026-09-23-live-catalog-discovery-and-per-model-protocol.md: 19a8a213381fd50d57f20f4f104f4537afbe95ab
-2026-09-23-live-catalog-discovery-and-per-model-protocol.zh.md: 81316014d3af5f19726b74983be0b35000fe19b0
+/agent-note-live-model-discovery-and-per-model-protocol-for-catalog-routes:
+  en: 92fb8eab411bfdea
+  zh: 0963477dd59d0c36
+/agent-note-live-model-discovery-and-per-model-protocol-for-catalog-routes/problem:
+  en: 8262a91ae478bdd9
+  zh: a2e17f380ce1df10
+/agent-note-live-model-discovery-and-per-model-protocol-for-catalog-routes/decision:
+  en: a619c77bfe34b598
+  zh: ce9aef7d9ce249c8
+/agent-note-live-model-discovery-and-per-model-protocol-for-catalog-routes/alternatives-considered:
+  en: 0ceaf564fbf7fa82
+  zh: 98933496c28348ad
+/agent-note-live-model-discovery-and-per-model-protocol-for-catalog-routes/consequences:
+  en: 55c9ec02edf9fdb7
+  zh: 6986f5c4d340418f

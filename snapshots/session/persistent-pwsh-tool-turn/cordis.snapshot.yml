@@ -1,6 +1,6 @@
 # Keyless replay counterpart to persistent-pwsh.cordis.yml.
 - id: llm-deepseek
-  name: '@deepseek-ai/dsh-llm-deepseek'
+  name: '@deepseek-ai/dsh-llm-deepseek-api-key'
   disabled: true
 
 - insert:
@@ -84,6 +84,18 @@
 
 - id: tool-skill
   name: '@deepseek-ai/dsh-tool-skill'
+  disabled: true
+
+- id: skill-preferences
+  name: '@deepseek-ai/dsh-skill-preferences'
+  disabled: true
+
+- id: skill-sources
+  name: '@deepseek-ai/dsh-skill-sources'
+  disabled: true
+
+- id: tool-skill-manage
+  name: '@deepseek-ai/dsh-tool-skill-manage'
   disabled: true
 
 - id: tool-bash

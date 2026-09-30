@@ -1,6 +1,19 @@
-# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
-# side as of the last confirmed-consistent state. Both languages carry equal authority;
-# after editing either side, bring the other along and re-record with:
+# Bilingual-pair consistency record for 2026-09-23-skill-enablement-filters.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/feature/2026-09-23-skill-enablement-filters.md
-2026-09-23-skill-enablement-filters.md: b183e32150ba7c4c4adff3f3d02fbae145fa97b3
-2026-09-23-skill-enablement-filters.zh.md: 6f6772ad6213e8c40a288fa8684598c5f408a326
+/agent-note-per-skill-enablement-enforced-by-registry-filters:
+  en: c7080b1b4c376135
+  zh: 59567582207c329c
+/agent-note-per-skill-enablement-enforced-by-registry-filters/problem:
+  en: 3c79627ffe75ae00
+  zh: 2111e45a65b929aa
+/agent-note-per-skill-enablement-enforced-by-registry-filters/decision:
+  en: 66a983013e3322b7
+  zh: 3e9c2287b2111ec5
+/agent-note-per-skill-enablement-enforced-by-registry-filters/alternatives-considered:
+  en: baee81e59fbb43bd
+  zh: df60e84d075ddec5
+/agent-note-per-skill-enablement-enforced-by-registry-filters/consequences:
+  en: 0024050955b57bc8
+  zh: ed9b6561a2ec5b69

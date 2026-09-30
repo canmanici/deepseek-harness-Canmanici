@@ -1,7 +1,7 @@
 {
   "name": "@deepseek-ai/dsh-tool-skill-manage",
   "description": "Model-facing manage_skills tool that lists skills and switches them on or off for DeepSeek Harness",
-  "version": "0.1.7-alpha.2",
+  "version": "0.2.0-rc.2",
   "publishConfig": {
     "access": "public"
   },

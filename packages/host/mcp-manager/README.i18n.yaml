@@ -1,6 +1,49 @@
-# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
-# side as of the last confirmed-consistent state. Both languages carry equal authority;
-# after editing either side, bring the other along and re-record with:
+# Bilingual-pair consistency record for README.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write packages/host/mcp-manager/README.md
-README.md: 00b0dfa79e6cdc779ea45aa76248e3e3806652e5
-README.zh.md: bf804b257abca1e727237c9bf2b418a644181c10
+/:
+  en: 0bac7328512fa37b
+  zh: 2c4fb0ffe6b80038
+/deepseek-ai-dsh-host-mcp-manager:
+  en: 143a7133118f700d
+  zh: 544cecd8d640e1a5
+/deepseek-ai-dsh-host-mcp-manager/summary:
+  en: 85413c0021826c27
+  zh: 796fcd0ad156f188
+/deepseek-ai-dsh-host-mcp-manager/table-of-contents:
+  en: d152484eb41ac6b4
+  zh: a134331a31395608
+/deepseek-ai-dsh-host-mcp-manager/use-this-package:
+  en: a409bf7c3bd394c8
+  zh: 7a39f8b305d3ce6d
+/deepseek-ai-dsh-host-mcp-manager/use-this-package/remote-methods:
+  en: b3950eeb4fa9bda7
+  zh: 3697387f4946613f
+/deepseek-ai-dsh-host-mcp-manager/use-this-package/configuration:
+  en: 93a414cf6083cc82
+  zh: 9f9f7f9cd6dbde19
+/deepseek-ai-dsh-host-mcp-manager/use-this-package/events-and-errors:
+  en: 263189d552d57db1
+  zh: 041013438491c13d
+/deepseek-ai-dsh-host-mcp-manager/understand-the-implementation:
+  en: 001148ca875eda53
+  zh: d830d8a9091b64ed
+/deepseek-ai-dsh-host-mcp-manager/understand-the-implementation/source-map:
+  en: a3def8cb468c3d0d
+  zh: dede33092a89a977
+/deepseek-ai-dsh-host-mcp-manager/further-exploration:
+  en: 18ebc061178d4e63
+  zh: 9bf929997d78811d
+/deepseek-ai-dsh-host-mcp-manager/model-experience:
+  en: be993c5c3bbe9cf3
+  zh: 0f2bdd10565399c4
+/deepseek-ai-dsh-host-mcp-manager/model-experience/kv-cache-effect:
+  en: ca75c51c89c2c9b0
+  zh: 696d26adaf4eda6d
+/deepseek-ai-dsh-host-mcp-manager/known-limitations-and-deferred-work:
+  en: 6d823ecc6ae9e3e7
+  zh: c3cbab61cd6def39
+/deepseek-ai-dsh-host-mcp-manager/known-limitations-and-deferred-work/dev-note:
+  en: e67f633dc6fe7773
+  zh: 3bb0c20c93f16f98

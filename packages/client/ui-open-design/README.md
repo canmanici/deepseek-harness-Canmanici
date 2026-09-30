@@ -63,7 +63,7 @@ No runtime invariant companion is published: this package projects the Host's st
 <a id="model-experience"></a>
 ## Model Experience
 
-None; this package presents the human-facing Studio and runtime status. The separate MCP client row provides OpenDesign tools to the agent.
+None, as the package presents the human-facing Studio and runtime status; the separate MCP client row provides OpenDesign tools to the agent.
 
 #### KV Cache effect
 

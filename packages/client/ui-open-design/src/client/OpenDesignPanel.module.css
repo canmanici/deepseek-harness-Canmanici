@@ -15,7 +15,7 @@
   gap: 16px;
   flex: 0 0 auto;
   padding: 16px 20px;
-  border-bottom: 1px solid var(--dsw-alias-border-primary);
+  border-bottom: 0.5px solid var(--dsw-alias-border-primary);
 }
 
 .heading {
@@ -52,8 +52,8 @@
   gap: 16px;
   width: min(100%, 520px);
   padding: 24px;
-  border: 1px solid var(--dsw-alias-border-primary);
-  border-radius: 14px;
+  border: 0.5px solid var(--dsw-alias-border-primary);
+  border-radius: var(--dsw-radius-md);
   background: var(--dsw-alias-background-secondary);
 }
 
@@ -75,7 +75,7 @@
 .safety {
   margin: 0;
   padding: 10px 12px;
-  border-radius: 8px;
+  border-radius: var(--dsw-radius-sm);
   color: var(--dsw-alias-label-primary);
   background: color-mix(in srgb, var(--dsw-alias-state-warning-primary, var(--dsw-alias-state-business-primary)) 12%, transparent);
   font-size: 12px;
@@ -101,7 +101,7 @@
   width: 30px;
   height: 30px;
   place-items: center;
-  border-radius: 8px;
+  border-radius: var(--dsw-radius-sm);
   color: var(--dsw-alias-label-primary);
   background: var(--dsw-alias-background-secondary);
 }

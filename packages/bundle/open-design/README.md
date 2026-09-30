@@ -61,7 +61,7 @@ This bundle inserts the Host runtime owner, browser Studio panel, and `dsh-mcp-c
 <a id="model-experience"></a>
 ## Model Experience
 
-Indirectly, the model receives the tools and instructions advertised by the connected OpenDesign MCP server. DSH names each tool under `mcp__open-design__...`; OpenDesign determines the available operations.
+Indirectly, through the connected OpenDesign MCP server, the model receives the tools and instructions it advertises; DSH names each tool under `mcp__open-design__...` and OpenDesign determines the available operations.
 
 #### KV Cache effect
 
